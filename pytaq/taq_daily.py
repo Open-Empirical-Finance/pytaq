@@ -1,0 +1,722 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Jul  6 17:32:02 2020
+
+@author: vincentgregoire
+"""
+
+import pandas as pd
+import numpy as np
+from datetime import datetime, time, timedelta
+
+
+class TaqDaily():
+    def __init__(self, method=None, db=None):
+        if method == 'PostgreSQL':
+            self.method = method
+            self.db = db
+        elif method == 'SASPy':
+            self.method = method
+            self.db = db
+        elif method == 'Parquet': # Local files
+            self.method = method
+            self.db = db
+        elif method is None:
+            self.method = method
+            self.db = None
+        else:
+            raise Exception('Unknown method for TaqDaily: ' + str(method))
+        
+        self.taq_library='taqmsec'
+        
+        # Holden & Jacobsen defaults
+        self.keep_qu_cond = ['A', 'B', 'H', 'O', 'R', 'W']
+        # If quoted spread > $5 and bid (ask) has decreased (increased) by
+        # $2.50 then remove that quote.
+        self.max_spread = 5
+        self.max_quote_change = 2.5
+        
+        self.delete_canceled_quotes = True
+        self.delete_empty_quotes = True
+        self.delete_crossed_markets = True
+        self.delete_withdrawned_quotes = True
+        self.delete_abnormal_spreads = True
+        self.keep_changes_only = True
+        
+        self.start_time_quotes = time(hour=9, minute=0)
+        self.end_time_quotes = time(hour=16, minute=0)
+        self.start_time_trades = time(hour=9, minute=30)
+        self.end_time_trades = time(hour=16, minute=0)
+    
+    def time_to_sql(self, x, quote='"'):
+        out =  (str(x.hour).zfill(2) + ':' + str(x.minute).zfill(2) + ':' +
+                str(x.second).zfill(2) + '.' +
+                str(int(np.round(x.microsecond/1000))).zfill(3))
+        return quote + out + quote
+    
+
+#%%  Symbols SASPy query
+    def get_nbbo_symbols_saspy(self, date):
+        nbbo_table = 'nbbom_' + date.strftime('%Y%m%d')
+
+        sas_proc = 'proc sql;\n create table symbols as select distinct(sym_root) as symbol\n from ' + self.taq_library + '.' + nbbo_table + ';\n quit;'
+        self.db.submit(sas_proc)
+        sas_symbols = self.db.sasdata(libref='work', table='symbols')
+        df = sas_symbols.to_df()
+        return [x for x in df.symbol.unique()]
+
+
+#%%  Get symbol list from nbbo table
+    def get_nbbo_symbols(self, date):
+        if self.method == 'PostgreSQL':
+            # TODO
+            raise Exception('Method PostgreSQL not supported for get_nbbo_symbols()')     
+        elif self.method == 'SASPy':
+            df = self.get_nbbo_symbols_saspy(date)
+        elif self.method is None:
+            raise Exception('Method needed for get_nbbo_symbols()')
+        else:
+            raise Exception('Unknown method for TaqDaily: ' + str(self.method))       
+
+    
+    
+#%%  NBBO PostgreSQL query
+    def get_nbbo_table_postgresql(self, date, symbols=None, common_only=True):
+        nbbo_table = 'nbbom_' + date.strftime('%Y%m%d')
+
+        # Columns to retreive from database
+        nbbo_cols = ['date', 'time_m', 'sym_root', 'sym_suffix', 'best_bid',
+                     'best_bidsiz', 'best_ask', 'best_asksiz', 'qu_cond',
+                     'qu_seqnum', 'best_askex', 'best_bidex', 'qu_cancel']
+
+        select_cond = ('SELECT ' + ', '.join(nbbo_cols) + ' FROM ' +
+                       self.taq_library + '.' + nbbo_table)
+
+        # This is for common stocks only, can tweak to have other symbols
+        if symbols is not None:
+            symbol_cond = (" WHERE sym_root IN ('" + "','".join(symbols) +
+                           "') AND sym_suffix IS NULL")
+        else:
+            symbol_cond = (' WHERE sym_suffix IS NULL')
+
+        # Retreive quotes during normal trading hours, starting before market
+        # open to ensure we have NBBO quotes at the beginning of the day.
+        time_cond = (' AND (time_m BETWEEN ' +
+                     self.time_to_sql(self.start_time_quotes, "'") + ' AND ' +
+                     self.time_to_sql(self.end_time_quotes, "'") + ')')
+
+        sql_query = select_cond + symbol_cond + time_cond
+        return self.db.raw_sql(sql_query)
+    
+#%%  NBBO sas query
+
+    def get_nbbo_table_saspy(self, date, symbols=None, common_only=True):
+        nbbo_table = 'nbbom_' + date.strftime('%Y%m%d')
+
+        # Columns to retreive from database
+        nbbo_cols = ['date', 'time_m', 'sym_root', 'sym_suffix', 'best_bid',
+                     'best_bidsiz', 'best_ask', 'best_asksiz', 'qu_cond',
+                     'qu_seqnum', 'best_askex', 'best_bidex', 'qu_cancel']
+
+
+        sas_proc = ('data DailyNBBO;\n set taqmsec.' + nbbo_table +
+                    ' (keep = ' + ' '.join(nbbo_cols) + 
+                    ');\n where sym_root in ("' + '","'.join(symbols) + 
+                    '") and sym_suffix = "" and ((' + 
+                    self.time_to_sql(self.start_time_quotes) + 
+                    't) <= time_m <= (' +
+                    self.time_to_sql(self.end_time_quotes) +
+                    't));\n run;')
+
+        self.db.submit(sas_proc)
+        sas_nbbo = self.db.sasdata(libref='work', table='DailyNBBO')
+        df = sas_nbbo.to_df()
+        df.columns = [c.lower() for c in df.columns]
+        
+        df['time_m'] = df.time_m.dt.time
+        
+        
+        return df
+
+
+#%%  NBBO
+    # TODO: add support for other than common stocks
+    #       Add step 4 (changes only)
+    def get_nbbo_table(self, date, symbols=None, common_only=True, output_flags=False):
+        if self.method == 'PostgreSQL':
+            df = self.get_nbbo_table_postgresql(date, symbols, common_only)  
+        elif self.method == 'SASPy':
+            df = self.get_nbbo_table_saspy(date, symbols, common_only)
+        elif self.method == 'Parquet':
+            raise Exception('Method Parquet not supported for get_nbbo_table()')
+        elif self.method is None:
+            raise Exception('Method needed for get_nbbo_table()')
+        else:
+            raise Exception('Unknown method for TaqDaily: ' + str(self.method))       
+
+        # Merge date and time
+        df['timestamp'] = df[['date', 'time_m']].apply(
+            lambda x: datetime.combine(x['date'], x['time_m']), axis=1)
+        
+        return self.clean_nbbo_table(df, output_flags=output_flags)
+
+#%% NBBO cleanup
+    def clean_nbbo_table(self, df, output_flags=False):
+        # Post-SQL query cleanup
+        
+        # Merge symbol
+        df['symbol'] = df['sym_root']
+        sel = df.sym_suffix.notnull()
+        df.loc[sel, 'symbol'] = (df.loc[sel, 'sym_root'] + ' ' + 
+                                 df.loc[sel, 'sym_suffix'])
+        
+        if self.keep_qu_cond is not None:
+            # Quote condition must be normal
+            df = df[df.qu_cond.isin(self.keep_qu_cond)]
+            
+        if self.delete_canceled_quotes:
+            # Delete if canceled
+            df = df[df.qu_cancel != 'B']
+            
+            
+        if self.delete_empty_quotes:
+            # TODO: double-check, it seems this steps is actually wrong, you
+            # should keep empty quotes. (step from H&J)
+            # Delete if both ask and bid (or their size) are 0 or None
+            del_sel = (((df.best_ask <= 0) & (df.best_bid <= 0)) |
+                    ((df.best_asksiz <= 0) & (df.best_bidsiz <= 0)) |
+                    (df.best_ask.isnull() & df.best_bid.isnull()) |
+                    (df.best_asksiz.isnull() & df.best_bidsiz.isnull()))
+            
+            df = df[~del_sel]
+        
+        df['spread'] = df.best_ask - df.best_bid
+        df['midpoint'] = (df.best_ask + df.best_bid) / 2
+        
+        # If size or price = 0 or null, set price and size to null
+        ask_sel = ((df.best_ask <= 0) | df.best_ask.isnull() |
+                (df.best_asksiz <= 0) |df.best_asksiz.isnull())
+        df.loc[ask_sel, ['best_ask', 'best_asksiz']] = np.nan
+        
+        # If size or price = 0 or null, set price and size to null
+        bid_sel = ((df.best_bid <= 0) | df.best_bid.isnull() |
+                (df.best_bidsiz <= 0) |df.best_bidsiz.isnull())
+        df.loc[bid_sel, ['best_bid', 'best_bidsiz']] = np.nan
+        
+        # Bid/ask size are in round lots
+        df['best_bidsizeshares'] = df.best_bidsiz * 100
+        df['best_asksizeshares'] = df.best_asksiz * 100
+        
+        del df['best_bidsiz']
+        del df['best_asksiz']
+        
+
+        if self.delete_abnormal_spreads:
+            # Get previous midpoint
+            # Note: H&J only sorts on sym_root, not sym_suffix.
+            #       They also sort on date, not timestamps (this is weird)
+            df = df.sort_values(['symbol', 'timestamp'])
+            
+            df['lmid'] = df.groupby(['symbol'])['midpoint'].shift()
+            
+            # If quoted spread > $5 and bid (ask) has decreased (increased) by
+            # $2.50 then remove that quote.
+            # Note: not sure this is good in all cases, i.e. when looking at large
+            # events.
+            # Note that here behaviour is sligthly different than in SAS
+            # Because of the way SAS handles comparison with missing value
+            # (i.e. a missin value is always smaller than a number)
+            # So if first row has spread greater than max spread, best_bid
+            # will be set to missing by SAS but not best_ask. Python
+            # won't set any to null.
+            bid_sel = ((df.spread > self.max_spread) &
+                    (df.best_bid < df.lmid - self.max_quote_change))
+            df.loc[bid_sel, ['best_bid', 'best_bidsizeshares']] = np.nan
+            ask_sel = ((df.spread > self.max_spread) & 
+                    (df.best_ask > df.lmid + self.max_quote_change))
+            df.loc[ask_sel, ['best_ask', 'best_asksizeshares']] = np.nan
+            
+        if self.keep_changes_only:
+            # Keep only changes
+            # There is a slight difference here with the SAS code because
+            # in Python np.nan == np.nan is False. Should not affect end results,
+            # but this means consecutive entries with all null symbols
+            # won't be removed.
+            grp = df.groupby('symbol')
+            sel = ((df['best_ask'] != grp['best_ask'].shift()) |
+                (df['best_bid'] != grp['best_bid'].shift()) |
+                (df['best_bidsizeshares'] != 
+                    grp['best_bidsizeshares'].shift()) |
+                (df['best_asksizeshares'] !=
+                    grp['best_asksizeshares'].shift()))
+            df = df[sel]
+        
+        # Keep only relevant columns
+        # Columns to output
+        nbbo_out_cols = ['timestamp', 'symbol', 'best_bid',
+                         'best_bidsizeshares', 'best_bidex', 'best_ask',
+                         'best_asksizeshares', 'best_askex', 'qu_seqnum']
+        
+        if output_flags:
+            nbbo_out_cols += ['qu_cond', 'qu_cancel']
+            
+        return df[nbbo_out_cols]
+ 
+    
+    #%% Quotes PostgreSQL
+    
+    def get_quote_table_postgresql(self, date, symbols=None, common_only=True):
+        quote_table = 'cqm_' + date.strftime('%Y%m%d')
+        
+        quote_cols = ['date', 'time_m', 'ex', 'sym_root', 'sym_suffix', 'bid',
+                      'bidsiz', 'ask', 'asksiz', 'qu_cond','qu_seqnum',
+                      'natbbo_ind', 'qu_source', 'qu_cancel']
+        
+        select_cond = ('SELECT ' + ', '.join(quote_cols) + ' FROM ' +
+                       self.taq_library + '.' + quote_table)
+        
+        # This is for common stocks only, can tweak to have other symbols
+        if symbols is not None:
+            symbol_cond = (" WHERE sym_root IN ('" + "','".join(symbols) +
+                           "') AND sym_suffix IS NULL")
+        else:
+            symbol_cond = (" WHERE sym_suffix IS NULL")
+         
+        # Retreive quotes during normal trading hours, starting before market
+        # open to ensure we have NBBO quotes at the beginning of the day.
+        time_cond = (' AND (time_m BETWEEN ' +
+                     self.time_to_sql(self.start_time_quotes, "'") + ' AND ' +
+                     self.time_to_sql(self.end_time_quotes, "'") + ')')
+            
+        sql_query = select_cond + symbol_cond + time_cond
+        df = self.db.raw_sql(sql_query)    
+        return df
+
+    #%% Quotes saspy
+    
+    def get_quote_table_saspy(self, date, symbols=None, common_only=True):
+        quote_table = 'cqm_' + date.strftime('%Y%m%d')
+        
+        quote_cols = ['date', 'time_m', 'ex', 'sym_root', 'sym_suffix', 'bid',
+                      'bidsiz', 'ask', 'asksiz', 'qu_cond','qu_seqnum',
+                      'natbbo_ind', 'qu_source', 'qu_cancel']
+
+
+        sas_proc = ('data DailyQuote;\n set taqmsec.' + quote_table +
+                    ' (keep = ' + ' '.join(quote_cols) + ')' +
+                    ';\n where sym_root in ("' + '","'.join(symbols) + 
+                    '") and sym_suffix = "" and ((' + 
+                    self.time_to_sql(self.start_time_quotes) + 
+                    't) <= time_m <= (' +
+                    self.time_to_sql(self.end_time_quotes) +
+                    't));\n run;')
+
+        self.db.submit(sas_proc)
+        sas_quote = self.db.sasdata(libref='work', table='DailyQuote')
+        df = sas_quote.to_df()
+        df.columns = [c.lower() for c in df.columns]
+        
+        df['time_m'] = df.time_m.dt.time
+        
+        return df
+ 
+    
+    #%% Quotes
+    
+    def get_quote_table(self, date, symbols=None, common_only=True,
+                        nbbo_only=True, output_flags=False):
+        if self.method == 'PostgreSQL':
+            df = self.get_quote_table_postgresql(date, symbols, common_only)  
+        elif self.method == 'SASPy':
+            df = self.get_quote_table_saspy(date, symbols, common_only)
+        elif self.method == 'Parquet':
+            raise Exception('Method Parquet not supported for get_quote_table()')
+        elif self.method is None:
+            raise Exception('Method needed for get_quote_table()')
+        else:
+            raise Exception('Unknown method for TaqDaily: ' + str(self.method))       
+
+        
+        # Merge date and time
+        df['timestamp'] = df[['date', 'time_m']].apply(
+            lambda x: datetime.combine(x['date'], x['time_m']), axis=1)
+        
+        return self.clean_quote_table(df, nbbo_only=nbbo_only,
+                                      output_flags=output_flags)
+        
+    def clean_quote_table(self, df, nbbo_only=True, output_flags=False):
+        # Merge symbol
+        df['symbol'] = df['sym_root']
+        sel = df.sym_suffix.notnull()
+        df.loc[sel, 'symbol'] = (df.loc[sel, 'sym_root'] + ' ' +
+                                 df.loc[sel, 'sym_suffix'])
+        
+        df['spread'] = df.ask - df.bid
+        
+        if self.keep_qu_cond is not None:
+            # Quote condition must be normal
+            df = df[df.qu_cond.isin(self.keep_qu_cond)]
+            
+        if self.delete_canceled_quotes:
+            # Delete if canceled
+            df = df[df.qu_cancel != 'B']
+
+        if self.delete_crossed_markets:
+            # Delete abnormal crossed markets
+            df = df[df.bid <= df.ask]
+            
+        if self.delete_abnormal_spreads:
+            # Delete abnormal spreads
+            df = df[df.spread <= self.max_spread]
+            
+        if self.delete_withdrawned_quotes:
+            # Delete withdrawn quotes (see H&J (2014) page 11 for details)
+            del_sel = (df.ask.isnull() | (df.ask <= 0) |
+                    df.asksiz.isnull() | (df.asksiz <=0) |
+                    df.bid.isnull() | (df.bid <= 0) |
+                    df.bidsiz.isnull() | (df.bidsiz <=0))
+            df = df[~del_sel]
+        
+        df = df.rename(columns={'ask': 'best_ask', 'bid': 'best_bid',
+                                'ex': 'best_bidex'})
+        df['best_askex'] = df['best_bidex']  
+          
+        # Bid/ask size are in round lots
+        df['best_bidsizeshares'] = df.bidsiz * 100
+        df['best_asksizeshares'] = df.asksiz * 100
+        
+        del df['bidsiz']
+        del df['asksiz']
+        
+        # Keep only those to be merged with NBBO file
+        if nbbo_only:
+            sel = (((df.qu_source == 'C') & (df.natbbo_ind == '1')) |
+                ((df.qu_source == 'N') & (df.natbbo_ind == '4')))
+            df = df[sel]
+        
+        quote_out_cols = ['timestamp', 'symbol', 'best_bid',
+                          'best_bidsizeshares', 'best_bidex', 'best_ask',
+                          'best_asksizeshares', 'best_askex', 'qu_seqnum']
+        
+        if output_flags:
+            quote_out_cols += ['qu_cond', 'natbbo_ind', 'qu_source', 'qu_cancel']
+        return df[quote_out_cols]
+    
+    #%% Trades PostgreSQL
+    
+    def get_trade_table_postgresql(self, date, symbols=None, common_only=True, get_cond=False):
+        trade_table = 'ctm_' + date.strftime('%Y%m%d')
+        
+        trade_cols = ['date', 'time_m', 'ex', 'sym_root', 'sym_suffix',
+                      'size', 'price', 'tr_seqnum']
+        if get_cond:
+            trade_cols += ['tr_scond']
+        
+        select_cond = ('SELECT ' + ', '.join(trade_cols) + ' FROM ' +
+                       self.taq_library + '.' + trade_table)
+        
+        # This is for common stocks only, can tweak to have other symbols
+        if symbols is not None:
+            symbol_cond = (" WHERE sym_root IN ('" + "','".join(symbols) +
+                           "') AND sym_suffix IS NULL")
+        else:
+            symbol_cond = (" WHERE sym_suffix IS NULL")
+         
+        # Retreive quotes during normal trading hours, starting before market
+        # open to ensure we have NBBO quotes at the beginning of the day.
+        time_cond = (' AND (time_m BETWEEN ' +
+                     self.time_to_sql(self.start_time_trades, "'") + ' AND ' +
+                     self.time_to_sql(self.end_time_trades, "'") + ')')
+        
+        # Retreive only correct trades
+        trade_cond = " AND tr_corr = '00' AND price > 0"
+            
+        sql_query = select_cond + symbol_cond + trade_cond + time_cond
+        df = self.db.raw_sql(sql_query)
+        return df
+
+    #%% Trades SASPy
+    
+    def get_trade_table_saspy(self, date, symbols=None, common_only=True, get_cond=False):
+        trade_table = 'ctm_' + date.strftime('%Y%m%d')
+        
+        trade_cols = ['date', 'time_m', 'ex', 'sym_root', 'sym_suffix',
+                      'size', 'price', 'tr_seqnum', 'tr_corr']
+        if get_cond:
+            trade_cols += ['tr_scond']
+
+        sas_proc = ('data DailyTrade;\n set taqmsec.' + trade_table +
+                    ' (keep = ' + ' '.join(trade_cols) + ')'
+                    ';\n where sym_root in ("' + '","'.join(symbols) + 
+                    '") and sym_suffix = ""  AND tr_corr = "00" AND price > 0 and ((' + #
+                    self.time_to_sql(self.start_time_quotes) + 
+                    't) <= time_m <= (' +
+                    self.time_to_sql(self.end_time_quotes) +
+                    't));\n run;')
+
+        self.db.submit(sas_proc)
+        sas_trade = self.db.sasdata(libref='work', table='DailyTrade')
+        df = sas_trade.to_df()
+        df.columns = [c.lower() for c in df.columns]
+        del df['tr_corr']
+        
+        df['time_m'] = df.time_m.dt.time
+        return df
+
+    #%% Trades
+     
+    def get_trade_table(self, date, symbols=None, common_only=True, get_cond=False):
+        if self.method == 'PostgreSQL':
+            df = self.get_trade_table_postgresql(date, symbols, common_only, get_cond)  
+        elif self.method == 'SASPy':
+            df = self.get_trade_table_saspy(date, symbols, common_only, get_cond) 
+        elif self.method == 'Parquet':
+            raise Exception('Method Parquet not supported for get_trade_table()')
+        elif self.method is None:
+            raise Exception('Method needed for get_trade_table()')
+        else:
+            raise Exception('Unknown method for TaqDaily: ' + str(self.method))    
+        
+        # Merge date and time
+        df['timestamp'] = df[['date', 'time_m']].apply(
+            lambda x: datetime.combine(x['date'], x['time_m']), axis=1)
+        
+        return self.clean_trade_table(df, get_cond=get_cond)
+
+
+    def clean_trade_table(self, df, get_cond=False):
+        # Merge symbol
+        df['symbol'] = df['sym_root']
+        sel = df.sym_suffix.notnull()
+        df.loc[sel, 'symbol'] = (df.loc[sel, 'sym_root'] + ' ' +
+                                 df.loc[sel, 'sym_suffix'])
+        trade_out_cols = ['timestamp', 'symbol', 'ex', 'size', 'price',
+                      'tr_seqnum']
+        if get_cond:
+            trade_out_cols += ['tr_scond']
+        
+        return df[trade_out_cols]
+    
+    #%% Official Complete NBBO
+    
+    def get_official_complete_nbbo(self, date=None, symbols=None,
+                                   nbbo_df=None, quote_df=None):
+        if nbbo_df is None:
+            nbbo_df = self.get_nbbo_table(date, symbols)
+        if quote_df is None:
+            quote_df = self.get_quote_table(date, symbols)
+    
+        # Note: Could use append() instead of concat()
+        # df = nbbo_df.append(quote_df)
+        df = pd.concat([nbbo_df, quote_df])
+    
+        # Remove duplicate quotes at same microsecond (keep last one based
+        # on sequence number)
+        df = df.sort_values(['symbol', 'timestamp', 'qu_seqnum'])
+        
+        if self.keep_changes_only:
+            df = df.groupby(['symbol', 'timestamp']).last().reset_index()
+        
+        
+        # # Drop obs with no change in obs.
+        # df = df.groupby(['symbol', 'best_bid', 'best_bidsizeshares',
+        #                  'best_bidex', 'best_ask', 'best_asksizeshares',
+        #                  'best_askex']).first().reset_index()
+    
+        return df
+    
+    #%% Spreads and depths
+
+    def compute_spreads(self, date, off_nbbo_df, start_time_spreads=None,
+                        end_time_spreads=None):
+        if start_time_spreads is None:
+            start_time_spreads = self.start_time_quotes
+        if end_time_spreads is None:
+            end_time_spreads = self.end_time_quotes
+        sel = (off_nbbo_df.timestamp.dt.time >= start_time_spreads) & (off_nbbo_df.timestamp.dt.time < end_time_spreads)
+        df = off_nbbo_df[sel].copy()
+        # Compute time between each quote
+        inforce = df.groupby(['symbol'])['timestamp'].diff().shift(-1)
+        df['inforce'] = inforce.dt.total_seconds()
+        # The entries for last quote of the day are missing.
+        sel = df.inforce.isnull()
+        df.loc[sel, 'inforce'] = np.abs(
+            (datetime.combine(date, end_time_spreads) -
+             df.loc[sel, 'timestamp']).dt.total_seconds())
+        
+        # Delete locked and crossed quotes
+        sel = ((df.best_bid == df.best_ask) |
+               (df.best_bid > df.best_ask))
+        df = df[~sel]
+        
+        # Compute spread measures
+        df['quoted_spread_dollar'] = df.best_ask - df.best_bid
+        # Note: could use dask array da.log()
+        df['quoted_spread_percent'] = np.log(df.best_ask) - np.log(df.best_bid)
+        df['best_ofr_depth_dollar'] = df.best_ask * df.best_asksizeshares
+        df['best_bid_depth_dollar'] = df.best_bid * df.best_bidsizeshares
+        df['best_ofr_depth_share'] = df.best_asksizeshares
+        df['best_bid_depth_share'] = df.best_bidsizeshares
+    
+        # Compute daily weighted averages 
+        measures = ['quoted_spread_dollar', 'quoted_spread_percent',
+                    'best_ofr_depth_dollar', 'best_bid_depth_dollar',
+                    'best_ofr_depth_share', 'best_bid_depth_share']
+        def compute_wspreads(x):
+            out = {}
+            for m in measures:
+                y = x[[m, 'inforce']].dropna()
+                if (y['inforce'].sum() == 0) or (y['inforce'].isnull().all()):
+                    out[m] = np.nan
+                else:
+                    out[m] = np.average(y[m], weights=y['inforce'], axis=0)
+            return pd.Series(out)
+        
+        spreads_df = df.groupby('symbol')[measures +
+                                          ['inforce']].apply(compute_wspreads)
+        return spreads_df
+    
+    #%%% Merge trades and NBBO
+    # We merge the quote in effect at trade time
+    
+    def merge_trades_nbbo(self, trade_df, off_nbbo_df):
+        trade_df = trade_df.sort_values(['timestamp', 'symbol'])
+        off_nbbo_df = off_nbbo_df.sort_values(['timestamp', 'symbol'])
+        
+        # Note: could use dask dataframe dd.merge_asof
+        df = pd.merge_asof(trade_df, off_nbbo_df, on='timestamp',
+                           by='symbol', allow_exact_matches=True,
+                           suffixes=('','_quote'))
+        
+        # Note: H&J code is wrong I think, 
+        # df = pd.merge_asof(trade_df, off_nbbo_df, on='timestamp',
+        #            by='symbol', allow_exact_matches=False,
+        #            suffixes=('','_quote'))
+        
+        df['midpoint'] = (df['best_bid'] + df['best_ask']) / 2
+        df['lock'] = 0
+        sel = (df['best_bid'] == df['best_ask'])
+        df.loc[sel, 'lock'] = 1
+        df['cross'] = 0
+        sel = (df['best_bid'] > df['best_ask'])
+        df.loc[sel, 'cross'] = 1
+        
+        # Trade direction (tick test)
+        df = df.sort_values(['timestamp', 'symbol'])
+        # Note: could use dask array da.sign
+        df['dir'] = np.sign(df.groupby(['symbol'])['price'].diff())
+        df.loc[df['dir'] == 0, 'dir'] = np.nan
+        df['dir'] = df.groupby(['symbol'])['dir'].fillna(method='ffill')
+        
+        # First classification test: use tick test
+        df['BuySellLR'] = df['dir']
+        df['BuySellEMO'] = df['dir']
+        df['BuySellCLNV'] = df['dir']
+        
+        # Second classification test: use specified conditions of LR, EMO and
+        # CLNV.
+        sel_not_lc = (df['lock'] == 0) & (df['lock'] == 0)
+        
+        df.loc[sel_not_lc & (df['price'] > df['midpoint']), 'BuySellLR'] = 1
+        df.loc[sel_not_lc & (df['price'] < df['midpoint']), 'BuySellLR'] = -1
+        
+        df.loc[sel_not_lc & (df['price'] == df['best_ask']), 'BuySellEMO'] = 1
+        df.loc[sel_not_lc & (df['price'] == df['best_bid']), 'BuySellEMO'] = -1
+        
+        df['ofr30'] = df['best_ask'] - 0.3 * (df['best_ask'] - df['best_ask'])
+        df['bid30'] = df['best_bid'] + 0.3 * (df['best_ask'] - df['best_ask'])
+        sel =  (df['price'] >= df['ofr30']) & (df['price'] <= df['best_ask'])
+        df.loc[sel_not_lc & sel, 'BuySellCLNV'] = 1
+        sel =  (df['price'] <= df['bid30']) & (df['price'] >= df['best_bid'])
+        df.loc[sel_not_lc & sel, 'BuySellCLNV'] = -1
+        
+        for x in ['dir', 'ofr30', 'bid30']:
+            del df[x]
+            
+        df['dollar'] = df['price'] * df['size']
+        
+        return df
+    
+    #%%%% Effective spreads
+    
+    def compute_effective_spreads(self, trade_and_nbbo_df):
+        df = trade_and_nbbo_df.copy()
+        # Note: coudl use dataframe abs() instead of numpy
+        # Note: could use dask array da.log()
+        # df['EffectiveSpread_Dollar'] = (df['price'] - df['midpoint']).abs() * 2
+        # df['EffectiveSpread_Percent'] = ((np.log(df['price']) - 
+        #                                   np.log(df['midpoint'])).abs() * 2)
+        
+        
+        df['EffectiveSpread_Dollar'] = np.abs(df['price'] - df['midpoint']) * 2
+        df['EffectiveSpread_Percent'] = (np.abs(np.log(df['price']) - 
+                                                np.log(df['midpoint'])) * 2)
+        return df
+            
+    #%%%% Realized spread and price impact
+    
+    def compute_rs_and_pi(self, trade_and_nbbo_df, off_nbbo_df, delay, suffix):
+        next_df = off_nbbo_df[['timestamp', 'symbol',
+                               'best_bid', 'best_ask']].copy()
+        next_df['midpoint'] = (next_df['best_bid'] + next_df['best_ask']) / 2
+        next_df['timestamp'] = next_df['timestamp'] - delay
+    
+        trade_and_nbbo_df = trade_and_nbbo_df.sort_values(['timestamp',
+                                                           'symbol'])
+        next_df = next_df.sort_values(['timestamp', 'symbol'])
+        # Note: could use dask dataframe dd.merge_asof
+        df = pd.merge_asof(trade_and_nbbo_df, next_df, on='timestamp',
+                              by='symbol', allow_exact_matches=True,
+                              suffixes=('','_next'))
+    
+        for sign in ['LR', 'EMO', 'CLNV']:
+            df['DollarRealizedSpread_' + sign + suffix] = \
+                df['BuySell' + sign] * (df['price'] - df['midpoint_next']) * 2
+            df['PercentRealizedSpread_' + sign + suffix] = \
+                (df['BuySell' + sign] * (np.log(df['price']) -
+                                         np.log(df['midpoint_next'])) * 2)
+            df['DollarPriceImpact_' + sign + suffix] = \
+                (df['BuySell' + sign] * (df['midpoint_next'] -
+                                         df['midpoint']) * 2)
+            df['PercentPriceImpact_' + sign + suffix] = \
+                (df['BuySell' + sign] * (np.log(df['midpoint_next']) -
+                                         np.log(df['midpoint'])) * 2)
+        
+        return df
+
+
+    #%%%% Daily averages (simple avg, dollar-weighted and share-weighted)
+    
+    def compute_averages_ave_sw_dw(self, df, measures, simple=True,
+                                   dollar_weighted=True, share_weighted=True):
+        weights = []
+        if dollar_weighted: weights.append('dollar')
+        if share_weighted: weights.append('size')
+        def compute_wavg(x):
+            out = {}
+            # For each, compute average, share-weighted and dollar-weighted
+            for m in measures:
+                y = x[[m] + weights].dropna()
+                if simple:
+                    try:
+                        out[m + '_Ave'] = np.average(y[m], axis=0)
+                    except: 
+                        out[m + '_Ave'] = np.nan
+                if dollar_weighted:
+                    try:
+                        out[m + '_DW'] = np.average(y[m], weights=y['dollar'],
+                                                    axis=0)
+                    except: 
+                        out[m + '_DW'] = np.nan
+                if share_weighted:
+                    try:
+                        out[m + '_SW'] = np.average(y[m], weights=y['size'],
+                                                    axis=0)
+                    except: 
+                        out[m + '_SW'] = np.nan
+            return pd.Series(out)
+        
+        out_df = df.groupby('symbol')[measures + weights].apply(compute_wavg)
+        
+        return out_df
