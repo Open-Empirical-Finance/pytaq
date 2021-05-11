@@ -8,11 +8,11 @@ Created on Mon Jul  6 17:32:02 2020
 
 import pandas as pd
 import numpy as np
-from datetime import datetime, time, timedelta
+from datetime import datetime, time
 
 
 class TaqDaily():
-    def __init__(self, method=None, db=None):
+    def __init__(self, method=None, db=None, track_retail=False):
         if method == 'PostgreSQL':
             self.method = method
             self.db = db
@@ -48,6 +48,9 @@ class TaqDaily():
         self.end_time_quotes = time(hour=16, minute=0)
         self.start_time_trades = time(hour=9, minute=30)
         self.end_time_trades = time(hour=16, minute=0)
+        
+        # Should we compute trade sign for retail trades
+        self.track_retail = track_retail
     
     def time_to_sql(self, x, quote='"'):
         out =  (str(x.hour).zfill(2) + ':' + str(x.minute).zfill(2) + ':' +
@@ -73,7 +76,7 @@ class TaqDaily():
             # TODO
             raise Exception('Method PostgreSQL not supported for get_nbbo_symbols()')     
         elif self.method == 'SASPy':
-            df = self.get_nbbo_symbols_saspy(date)
+            return self.get_nbbo_symbols_saspy(date)
         elif self.method is None:
             raise Exception('Method needed for get_nbbo_symbols()')
         else:
@@ -136,14 +139,14 @@ class TaqDaily():
         
         df['time_m'] = df.time_m.dt.time
         
-        
         return df
 
 
 #%%  NBBO
     # TODO: add support for other than common stocks
     #       Add step 4 (changes only)
-    def get_nbbo_table(self, date, symbols=None, common_only=True, output_flags=False):
+    def get_nbbo_table(self, date, symbols=None, common_only=True,
+                       output_flags=False):
         if self.method == 'PostgreSQL':
             df = self.get_nbbo_table_postgresql(date, symbols, common_only)  
         elif self.method == 'SASPy':
@@ -222,8 +225,8 @@ class TaqDaily():
             
             # If quoted spread > $5 and bid (ask) has decreased (increased) by
             # $2.50 then remove that quote.
-            # Note: not sure this is good in all cases, i.e. when looking at large
-            # events.
+            # Note: not sure this is good in all cases, i.e. when looking at
+            # large events.
             # Note that here behaviour is sligthly different than in SAS
             # Because of the way SAS handles comparison with missing value
             # (i.e. a missin value is always smaller than a number)
@@ -240,8 +243,8 @@ class TaqDaily():
         if self.keep_changes_only:
             # Keep only changes
             # There is a slight difference here with the SAS code because
-            # in Python np.nan == np.nan is False. Should not affect end results,
-            # but this means consecutive entries with all null symbols
+            # in Python np.nan == np.nan is False. Should not affect end 
+            # results, but this means consecutive entries with all null symbols
             # won't be removed.
             grp = df.groupby('symbol')
             sel = ((df['best_ask'] != grp['best_ask'].shift()) |
@@ -400,12 +403,14 @@ class TaqDaily():
                           'best_asksizeshares', 'best_askex', 'qu_seqnum']
         
         if output_flags:
-            quote_out_cols += ['qu_cond', 'natbbo_ind', 'qu_source', 'qu_cancel']
+            quote_out_cols += ['qu_cond', 'natbbo_ind', 'qu_source',
+                               'qu_cancel']
         return df[quote_out_cols]
     
     #%% Trades PostgreSQL
     
-    def get_trade_table_postgresql(self, date, symbols=None, common_only=True, get_cond=False):
+    def get_trade_table_postgresql(self, date, symbols=None, common_only=True,
+                                   get_cond=False):
         trade_table = 'ctm_' + date.strftime('%Y%m%d')
         
         trade_cols = ['date', 'time_m', 'ex', 'sym_root', 'sym_suffix',
@@ -438,7 +443,8 @@ class TaqDaily():
 
     #%% Trades SASPy
     
-    def get_trade_table_saspy(self, date, symbols=None, common_only=True, get_cond=False):
+    def get_trade_table_saspy(self, date, symbols=None, common_only=True,
+                              get_cond=False):
         trade_table = 'ctm_' + date.strftime('%Y%m%d')
         
         trade_cols = ['date', 'time_m', 'ex', 'sym_root', 'sym_suffix',
@@ -449,7 +455,7 @@ class TaqDaily():
         sas_proc = ('data DailyTrade;\n set taqmsec.' + trade_table +
                     ' (keep = ' + ' '.join(trade_cols) + ')'
                     ';\n where sym_root in ("' + '","'.join(symbols) + 
-                    '") and sym_suffix = ""  AND tr_corr = "00" AND price > 0 and ((' + #
+                    '") and sym_suffix = ""  AND tr_corr = "00" AND price > 0 and ((' +
                     self.time_to_sql(self.start_time_quotes) + 
                     't) <= time_m <= (' +
                     self.time_to_sql(self.end_time_quotes) +
@@ -466,11 +472,14 @@ class TaqDaily():
 
     #%% Trades
      
-    def get_trade_table(self, date, symbols=None, common_only=True, get_cond=False):
+    def get_trade_table(self, date, symbols=None, common_only=True,
+                        get_cond=False):
         if self.method == 'PostgreSQL':
-            df = self.get_trade_table_postgresql(date, symbols, common_only, get_cond)  
+            df = self.get_trade_table_postgresql(date, symbols, common_only,
+                                                 get_cond)  
         elif self.method == 'SASPy':
-            df = self.get_trade_table_saspy(date, symbols, common_only, get_cond) 
+            df = self.get_trade_table_saspy(date, symbols, common_only, 
+                                            get_cond) 
         elif self.method == 'Parquet':
             raise Exception('Method Parquet not supported for get_trade_table()')
         elif self.method is None:
@@ -530,12 +539,31 @@ class TaqDaily():
 
     def compute_spreads(self, date, off_nbbo_df, start_time_spreads=None,
                         end_time_spreads=None):
+        
+        if len(off_nbbo_df) == 0:
+            return None
         if start_time_spreads is None:
             start_time_spreads = self.start_time_quotes
         if end_time_spreads is None:
             end_time_spreads = self.end_time_quotes
-        sel = (off_nbbo_df.timestamp.dt.time >= start_time_spreads) & (off_nbbo_df.timestamp.dt.time < end_time_spreads)
-        df = off_nbbo_df[sel].copy()
+            
+        
+
+        
+        # Need the quote at the beginning of the interval
+        first = off_nbbo_df[off_nbbo_df.timestamp.dt.time <=
+                            start_time_spreads].groupby('symbol').last().reset_index()
+        if len(first) > 0:
+            first['timestamp'] = datetime.combine(date, start_time_spreads)
+        else:
+            first = None
+            
+        sel = ((off_nbbo_df.timestamp.dt.time >= start_time_spreads) &
+               (off_nbbo_df.timestamp.dt.time < end_time_spreads))
+        df = pd.concat([first, off_nbbo_df[sel].copy()])
+        if len(df) == 0:
+            return None
+        
         # Compute time between each quote
         inforce = df.groupby(['symbol'])['timestamp'].diff().shift(-1)
         df['inforce'] = inforce.dt.total_seconds()
@@ -544,7 +572,7 @@ class TaqDaily():
         df.loc[sel, 'inforce'] = np.abs(
             (datetime.combine(date, end_time_spreads) -
              df.loc[sel, 'timestamp']).dt.total_seconds())
-        
+    
         # Delete locked and crossed quotes
         sel = ((df.best_bid == df.best_ask) |
                (df.best_bid > df.best_ask))
@@ -580,7 +608,10 @@ class TaqDaily():
     #%%% Merge trades and NBBO
     # We merge the quote in effect at trade time
     
-    def merge_trades_nbbo(self, trade_df, off_nbbo_df):
+    def merge_trades_nbbo(self, trade_df, off_nbbo_df, track_retail=None):
+        if track_retail is None:
+            track_retail = self.track_retail
+
         trade_df = trade_df.sort_values(['timestamp', 'symbol'])
         off_nbbo_df = off_nbbo_df.sort_values(['timestamp', 'symbol'])
         
@@ -633,6 +664,31 @@ class TaqDaily():
         
         for x in ['dir', 'ofr30', 'bid30']:
             del df[x]
+        
+        if track_retail:
+            # Compute retail sign following "TRACKING RETAIL INVESTOR ACTIVITY"
+            # by EKKEHART BOEHMER, CHARLES M. JONES, and XIAOYAN ZHANG
+            # Assumes that filter on exchange is already done.
+            def compute_retail_sign(s):
+                out = np.full(s.shape, np.nan)
+                for i in range(s.shape[0]):
+                    z = 100 * np.mod(s[i], 0.01)
+                    if ((z >= 1e-4) & (z < .4)):
+                        out[i] =  -1.0
+                    if ((z >= 0.6) & (z < (1-1e-4))):
+                        out[i] = 1.0
+                return out
+            sel = (df['ex'] == 'D')
+            df['BuySellBJZ'] = np.nan
+            df.loc[sel, 'BuySellBJZ'] = \
+                compute_retail_sign(df.loc[sel,'price'].values)
+            
+            sel = df['BuySellBJZ'].isnull()
+            for x in ['LR', 'EMO', 'CLNV']:
+                df['BuySell' + x + 'notBJZ'] = np.nan
+                df.loc[sel, 'BuySell' + x + 'notBJZ'] = df.loc[sel,
+                                                               'BuySell' + x ]
+                
             
         df['dollar'] = df['price'] * df['size']
         
@@ -642,21 +698,18 @@ class TaqDaily():
     
     def compute_effective_spreads(self, trade_and_nbbo_df):
         df = trade_and_nbbo_df.copy()
-        # Note: coudl use dataframe abs() instead of numpy
-        # Note: could use dask array da.log()
-        # df['EffectiveSpread_Dollar'] = (df['price'] - df['midpoint']).abs() * 2
-        # df['EffectiveSpread_Percent'] = ((np.log(df['price']) - 
-        #                                   np.log(df['midpoint'])).abs() * 2)
         
-        
-        df['EffectiveSpread_Dollar'] = np.abs(df['price'] - df['midpoint']) * 2
-        df['EffectiveSpread_Percent'] = (np.abs(np.log(df['price']) - 
+        df['DollarEffectiveSpread'] = np.abs(df['price'] - df['midpoint']) * 2
+        df['PercentEffectiveSpread'] = (np.abs(np.log(df['price']) - 
                                                 np.log(df['midpoint'])) * 2)
         return df
             
     #%%%% Realized spread and price impact
     
-    def compute_rs_and_pi(self, trade_and_nbbo_df, off_nbbo_df, delay, suffix):
+    def compute_rs_and_pi(self, trade_and_nbbo_df, off_nbbo_df, delay, suffix,
+                          track_retail=None):
+        if track_retail is None:
+            track_retail = self.track_retail
         next_df = off_nbbo_df[['timestamp', 'symbol',
                                'best_bid', 'best_ask']].copy()
         next_df['midpoint'] = (next_df['best_bid'] + next_df['best_ask']) / 2
@@ -669,8 +722,12 @@ class TaqDaily():
         df = pd.merge_asof(trade_and_nbbo_df, next_df, on='timestamp',
                               by='symbol', allow_exact_matches=True,
                               suffixes=('','_next'))
+        
+        signs = ['LR', 'EMO', 'CLNV']
+        if track_retail:
+            signs += ['BJZ'] + [x + 'notBJZ' for x in signs]
     
-        for sign in ['LR', 'EMO', 'CLNV']:
+        for sign in signs:
             df['DollarRealizedSpread_' + sign + suffix] = \
                 df['BuySell' + sign] * (df['price'] - df['midpoint_next']) * 2
             df['PercentRealizedSpread_' + sign + suffix] = \
