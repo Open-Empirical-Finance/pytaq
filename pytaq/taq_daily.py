@@ -668,7 +668,6 @@ class TaqDaily():
         if track_retail:
             # Compute retail sign following "TRACKING RETAIL INVESTOR ACTIVITY"
             # by EKKEHART BOEHMER, CHARLES M. JONES, and XIAOYAN ZHANG
-            # Assumes that filter on exchange is already done.
             def compute_retail_sign(s):
                 out = np.full(s.shape, np.nan)
                 for i in range(s.shape[0]):
