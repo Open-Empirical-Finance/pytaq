@@ -548,21 +548,10 @@ class TaqDaily():
             end_time_spreads = self.end_time_trades
             
         
-
-        
-        # Need the quote at the beginning of the interval
-        first = off_nbbo_df[off_nbbo_df.timestamp.dt.time <=
-                            start_time_spreads].groupby('symbol').last().reset_index()
-        if len(first) > 0:
-            first['timestamp'] = datetime.combine(date, start_time_spreads)
-        else:
-            first = None
-            
         sel = ((off_nbbo_df.timestamp.dt.time >= start_time_spreads) &
                (off_nbbo_df.timestamp.dt.time < end_time_spreads))
-        df = pd.concat([first, off_nbbo_df[sel].copy()])
-        if len(df) == 0:
-            return None
+
+        df = off_nbbo_df[sel].copy()
         
         # Compute time between each quote
         df['inforce'] = df.groupby(['symbol'])['timestamp'].diff().dt.total_seconds()
