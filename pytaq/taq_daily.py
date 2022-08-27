@@ -543,9 +543,9 @@ class TaqDaily():
         if len(off_nbbo_df) == 0:
             return None
         if start_time_spreads is None:
-            start_time_spreads = self.start_time_quotes
+            start_time_spreads = self.start_time_trades
         if end_time_spreads is None:
-            end_time_spreads = self.end_time_quotes
+            end_time_spreads = self.end_time_trades
             
         
 
@@ -565,8 +565,8 @@ class TaqDaily():
             return None
         
         # Compute time between each quote
-        inforce = df.groupby(['symbol'])['timestamp'].diff().shift(-1)
-        df['inforce'] = inforce.dt.total_seconds()
+        df['inforce'] = df.groupby(['symbol'])['timestamp'].diff().dt.total_seconds()
+        df['inforce'] = df.groupby(['symbol'])['inforce'].shift(-1)
         # The entries for last quote of the day are missing.
         sel = df.inforce.isnull()
         df.loc[sel, 'inforce'] = np.abs(
@@ -617,7 +617,7 @@ class TaqDaily():
         
         # Note: could use dask dataframe dd.merge_asof
         df = pd.merge_asof(trade_df, off_nbbo_df, on='timestamp',
-                           by='symbol', allow_exact_matches=True,
+                           by='symbol', allow_exact_matches=False,
                            suffixes=('','_quote'))
         
         # Note: H&J code is wrong I think, 
@@ -647,7 +647,7 @@ class TaqDaily():
         
         # Second classification test: use specified conditions of LR, EMO and
         # CLNV.
-        sel_not_lc = (df['lock'] == 0) & (df['lock'] == 0)
+        sel_not_lc = (df['lock'] == 0) & (df['cross'] == 0)
         
         df.loc[sel_not_lc & (df['price'] > df['midpoint']), 'BuySellLR'] = 1
         df.loc[sel_not_lc & (df['price'] < df['midpoint']), 'BuySellLR'] = -1
@@ -655,8 +655,8 @@ class TaqDaily():
         df.loc[sel_not_lc & (df['price'] == df['best_ask']), 'BuySellEMO'] = 1
         df.loc[sel_not_lc & (df['price'] == df['best_bid']), 'BuySellEMO'] = -1
         
-        df['ofr30'] = df['best_ask'] - 0.3 * (df['best_ask'] - df['best_ask'])
-        df['bid30'] = df['best_bid'] + 0.3 * (df['best_ask'] - df['best_ask'])
+        df['ofr30'] = df['best_ask'] - 0.3 * (df['best_ask'] - df['best_bid'])
+        df['bid30'] = df['best_bid'] + 0.3 * (df['best_ask'] - df['best_bid'])
         sel =  (df['price'] >= df['ofr30']) & (df['price'] <= df['best_ask'])
         df.loc[sel_not_lc & sel, 'BuySellCLNV'] = 1
         sel =  (df['price'] <= df['bid30']) & (df['price'] >= df['best_bid'])
@@ -698,6 +698,9 @@ class TaqDaily():
     def compute_effective_spreads(self, trade_and_nbbo_df):
         df = trade_and_nbbo_df.copy()
         
+        sel = ((df.cross == 1) | (df.lock == 1))
+        df = df[~sel]
+    
         df['DollarEffectiveSpread'] = np.abs(df['price'] - df['midpoint']) * 2
         df['PercentEffectiveSpread'] = (np.abs(np.log(df['price']) - 
                                                 np.log(df['midpoint'])) * 2)
@@ -719,9 +722,13 @@ class TaqDaily():
         next_df = next_df.sort_values(['timestamp', 'symbol'])
         # Note: could use dask dataframe dd.merge_asof
         df = pd.merge_asof(trade_and_nbbo_df, next_df, on='timestamp',
-                              by='symbol', allow_exact_matches=True,
+                              by='symbol', allow_exact_matches=False,
                               suffixes=('','_next'))
         
+        sel = ((df.best_bid_next == df.best_ask_next) |
+                (df.best_bid_next > df.best_ask_next))
+        df = df[~sel]
+    
         signs = ['LR', 'EMO', 'CLNV']
         if track_retail:
             signs += ['BJZ'] + [x + 'notBJZ' for x in signs]
