@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Connecting to database &mdash; pytaq 0.0.1 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="_static/doctools.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="NBBO symbols" href="nbbo%20symbols.html" />
+    <link rel="prev" title="Welcome to pytaq’s documentation!" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> pytaq
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Creatting TaqDaliy object</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Connecting to database</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#postgresql">PostgreSQL</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#saspy">SASpy</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Getting Data</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="nbbo%20symbols.html">NBBO symbols</a></li>
+<li class="toctree-l1"><a class="reference internal" href="nbbo%20tables.html">NBBO tables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quote%20tables.html">Qoute tables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="trade%20tables.html">Trade tables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="official%20complete%20nbbo%20tables.html">Official Complete NBBO tables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="trade%20nbbo%20tables.html">Trade-NBBO tables</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Processing Data</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="spreads.html">Spreads</a></li>
+<li class="toctree-l1"><a class="reference internal" href="averages.html">Averages</a></li>
+<li class="toctree-l1"><a class="reference internal" href="effective%20spreads.html">Effective Spreads</a></li>
+<li class="toctree-l1"><a class="reference internal" href="realized%20spreads%20%26%20price%20impact.html">Realized Spreads &amp; Price Impact</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">pytaq</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Connecting to database</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/connecting.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="connecting-to-database">
+<h1>Connecting to database<a class="headerlink" href="#connecting-to-database" title="Permalink to this heading"></a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="TaqDaliy">
+<span class="sig-name descname"><span class="pre">TaqDaliy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">db</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">track_retail</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#TaqDaliy" title="Permalink to this definition"></a></dt>
+<dd><p>Create TaqDaliy object. Can connect to database using ‘PostgreSQL’ or ‘SASpy’ method.
+To use local files, <code class="docutils literal notranslate"><span class="pre">method</span></code> and <code class="docutils literal notranslate"><span class="pre">db</span></code> can be None.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>method</strong> (<em>str</em><em> or </em><em>None</em>) – The method of connecting to database, can be <code class="docutils literal notranslate"><span class="pre">'postgresql'</span></code> or <code class="docutils literal notranslate"><span class="pre">'saspy'</span></code> or None. If it is not None, <code class="docutils literal notranslate"><span class="pre">db</span></code> must be provided (not None) and only in this case can get data from databases. In any case, local files can be used.</p></li>
+<li><p><strong>db</strong> (<em>Connection</em><em> or </em><em>None</em>) – Connection to database based on selected method.</p></li>
+<li><p><strong>track_retail</strong> (<em>bool</em><em> or </em><em>None</em><em>, </em><em>default False</em>) – Compute retail sign following “Tracking retail investor activity” by Ekkehart Boehmer, Charles m. Jones, and Xiaoyan Zhang.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>TaqDaliy object.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<section id="postgresql">
+<h2>PostgreSQL<a class="headerlink" href="#postgresql" title="Permalink to this heading"></a></h2>
+<p><strong>Example 1:</strong> Creating TaqDaliy object and connecting to database by <cite>postgresql</cite> method.
+As an example, we use WRDS database.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pytaq</span> <span class="kn">import</span> <span class="n">TaqDaily</span>
+<span class="kn">import</span> <span class="nn">wrds</span>
+
+<span class="c1"># connecting to WRDS database, use your username instead of &#39;username&#39;, then enter password</span>
+<span class="n">db</span> <span class="o">=</span> <span class="n">wrds</span><span class="o">.</span><span class="n">Connection</span><span class="p">(</span><span class="n">wrds_username</span><span class="o">=</span><span class="s1">&#39;username&#39;</span><span class="p">)</span>
+
+<span class="c1"># creating TaqDaily object</span>
+<span class="n">taq</span> <span class="o">=</span> <span class="n">TaqDaily</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s1">&#39;PostgreSQL&#39;</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="n">db</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="saspy">
+<h2>SASpy<a class="headerlink" href="#saspy" title="Permalink to this heading"></a></h2>
+<p><strong>Example 2:</strong> Creating TaqDaliy object and connecting to database by <cite>saspy</cite> method.
+As an example, we use WRDS database. In this method, SAS 9.4 or higher must be installed on your machine.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pytaq</span> <span class="kn">import</span> <span class="n">TaqDaily</span>
+<span class="kn">import</span> <span class="nn">saspy</span>
+
+<span class="c1"># connecting to SAS session</span>
+<span class="n">db</span> <span class="o">=</span> <span class="n">saspy</span><span class="o">.</span><span class="n">SASsession</span><span class="p">(</span><span class="n">cfgname</span><span class="o">=</span><span class="s1">&#39;default&#39;</span><span class="p">)</span>
+
+<span class="c1"># creating TaqDaily object</span>
+<span class="n">taq</span> <span class="o">=</span> <span class="n">TaqDaily</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s1">&#39;saspy&#39;</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="n">db</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="Welcome to pytaq’s documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="nbbo%20symbols.html" class="btn btn-neutral float-right" title="NBBO symbols" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021, Vincent Grégoire.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

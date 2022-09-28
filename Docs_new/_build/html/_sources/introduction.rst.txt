@@ -1,0 +1,39 @@
+Introduction
+^^^^^^^^^^^^^
+
+Pytaq is a python module for processing TAQ data (Trade And Qoute data).
+This module replicates the code of the paper "Liquidity Measurement Problems in Fast, Competitive Markets: Expensive and Cheap Solutions ».
+
+Loading data
+===============
+It can work with local files or connect to following databases:
+
+* PostgreSQL
+* SASpy
+
+Getting data
+===============
+It is able to get following tables:
+
+* NBBO
+* Qoute
+* Trade
+* Official Complete NBBO
+
+Processing data
+===============
+USing the tables mentioned above, pytaq computes following items:
+
+* Spreads
+* Effective Spreads
+* Realized Spreads & Price Impact
+
+Refrences
+===============
+* `GitHub <https://github.com/vgreg/pytaq>`_ 
+*  Other kind of text ``Bold reference``.
+*  Bold **letters**.
+
+Credits
+========
+Pytaq was created by `Vincent Grégoire <http://www.vincentgregoire.com/>`_ (HEC Montréal)

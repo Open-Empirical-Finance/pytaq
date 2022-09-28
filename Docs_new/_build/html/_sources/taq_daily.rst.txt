@@ -1,0 +1,7 @@
+taq\_daily module
+=================
+
+.. automodule:: taq_daily
+   :members:
+   :undoc-members:
+   :show-inheritance:

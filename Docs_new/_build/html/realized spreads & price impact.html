@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Realized Spreads &amp; Price Impact &mdash; pytaq 0.0.1 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="_static/doctools.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Effective Spreads" href="effective%20spreads.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> pytaq
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Creatting TaqDaliy object</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="connecting.html">Connecting to database</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Getting Data</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="nbbo%20symbols.html">NBBO symbols</a></li>
+<li class="toctree-l1"><a class="reference internal" href="nbbo%20tables.html">NBBO tables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quote%20tables.html">Qoute tables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="trade%20tables.html">Trade tables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="official%20complete%20nbbo%20tables.html">Official Complete NBBO tables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="trade%20nbbo%20tables.html">Trade-NBBO tables</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Processing Data</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="spreads.html">Spreads</a></li>
+<li class="toctree-l1"><a class="reference internal" href="averages.html">Averages</a></li>
+<li class="toctree-l1"><a class="reference internal" href="effective%20spreads.html">Effective Spreads</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Realized Spreads &amp; Price Impact</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#dataframe">DataFrame</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#average">Average</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">pytaq</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Realized Spreads &amp; Price Impact</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/realized spreads &amp; price impact.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="realized-spreads-price-impact">
+<h1>Realized Spreads &amp; Price Impact<a class="headerlink" href="#realized-spreads-price-impact" title="Permalink to this heading"></a></h1>
+<section id="dataframe">
+<h2>DataFrame<a class="headerlink" href="#dataframe" title="Permalink to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="TaqDaliy.compute_rs_and_pi">
+<span class="sig-prename descclassname"><span class="pre">TaqDaliy.</span></span><span class="sig-name descname"><span class="pre">compute_rs_and_pi</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">date</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">symbols</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">trade_and_nbbo_df</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">off_nbbo_df</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delay</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">timedelta(minutes=5)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">suffix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'5min'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">track_retail</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#TaqDaliy.compute_rs_and_pi" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate realized spreads and price impacts based on three conventions: LR = Lee and Ready (1991), EMO = Ellis, Michaely, and O’hara (2000)
+and CLNV = Chakrabarty, Li, Nguyen, and Van ness (2006); find the nbbo midpoint for a specific delay subsequent to the trade.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>delay</strong> (<em>timedelta object</em><em>, </em><em>default 5 minutes</em>) – A specific delay subsequent to the trade to find the nbbo midpoint.</p></li>
+<li><p><strong>suffix</strong> (<em>str</em><em>, </em><em>default '5min'</em>) – To determine columns related to delay.</p></li>
+<li><p><strong>date</strong> (<em>datetime instance</em>) – Day that market was open at it.</p></li>
+<li><p><strong>symbols</strong> (<em>list</em><em>[</em><em>str</em><em>]</em>) – Symbols that data is related to it.</p></li>
+<li><p><strong>trade_and_nbbo_df</strong> (<em>Pandas DataFrame</em>) – Trade-NBBO table. If <code class="docutils literal notranslate"><span class="pre">trade_and_nbbo_df=None</span></code>, get it directly from database using <code class="docutils literal notranslate"><span class="pre">date</span></code> and <code class="docutils literal notranslate"><span class="pre">symbols</span></code>.</p></li>
+<li><p><strong>off_nbbo_df</strong> (<em>Pandas DataFrame</em>) – Offical Complete NBBO. If <code class="docutils literal notranslate"><span class="pre">off_nbbo_df=None</span></code>, get it directly from database using <code class="docutils literal notranslate"><span class="pre">date</span></code> and <code class="docutils literal notranslate"><span class="pre">symbols</span></code>.</p></li>
+<li><p><strong>track_retail</strong> (<em>bool</em><em> or </em><em>None</em><em>, </em><em>default track_retail of TaqDaliy instance</em>) – Compute retail sign following “Tracking retail investor activity” by Ekkehart Boehmer, Charles m. Jones, and Xiaoyan Zhang.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Realized Spreads and Price Impacts.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Pandas DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<p><strong>Example 1:</strong> Calculate Realized Spreads and Price Impacts DataFrame by providing <cite>date</cite> and <cite>symbols</cite>.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">from</span> <span class="nn">pytaq</span> <span class="kn">import</span> <span class="n">TaqDaily</span>
+<span class="kn">import</span> <span class="nn">wrds</span>
+
+<span class="c1"># connecting to WRDS database, use your username instead of &#39;username&#39;</span>
+<span class="n">db</span> <span class="o">=</span> <span class="n">wrds</span><span class="o">.</span><span class="n">Connection</span><span class="p">(</span><span class="n">wrds_username</span><span class="o">=</span><span class="s1">&#39;username&#39;</span><span class="p">)</span>
+<span class="n">taq</span> <span class="o">=</span> <span class="n">TaqDaily</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s1">&#39;PostgreSQL&#39;</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="n">db</span><span class="p">)</span>
+
+<span class="c1"># getting Realized Spreads and Price Impacts DataFrame using taqdaily instance</span>
+<span class="n">rs_pi_df</span> <span class="o">=</span> <span class="n">taq</span><span class="o">.</span><span class="n">compute_rs_and_pi</span><span class="p">(</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2016</span><span class="p">,</span><span class="mi">12</span><span class="p">,</span><span class="mi">7</span><span class="p">),</span> <span class="p">[</span><span class="s1">&#39;IBM&#39;</span><span class="p">])</span>
+<span class="n">rs_pi_df</span>
+</pre></div>
+</div>
+<p><strong>Example 2:</strong> Calculate Realized Spreads and Price Impacts DataFrame by providing <cite>trade_and_nbbo_df</cite> and <code class="docutils literal notranslate"><span class="pre">off_nbbo_df</span></code> local files.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">from</span> <span class="nn">pytaq</span> <span class="kn">import</span> <span class="n">TaqDaily</span>
+<span class="kn">import</span> <span class="nn">wrds</span>
+
+<span class="c1"># connecting to WRDS database, use your username instead of &#39;username&#39;</span>
+<span class="n">db</span> <span class="o">=</span> <span class="n">wrds</span><span class="o">.</span><span class="n">Connection</span><span class="p">(</span><span class="n">wrds_username</span><span class="o">=</span><span class="s1">&#39;username&#39;</span><span class="p">)</span>
+<span class="n">taq</span> <span class="o">=</span> <span class="n">TaqDaily</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s1">&#39;PostgreSQL&#39;</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="n">db</span><span class="p">)</span>
+
+<span class="c1"># getting Trade-NBBO and Official Complete NBBO tables, but you can use local files</span>
+<span class="n">trade_and_nbbo_df</span> <span class="o">=</span> <span class="n">taq</span><span class="o">.</span><span class="n">merge_trades_nbbo</span><span class="p">(</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2016</span><span class="p">,</span><span class="mi">12</span><span class="p">,</span><span class="mi">7</span><span class="p">),</span> <span class="p">[</span><span class="s1">&#39;IBM&#39;</span><span class="p">])</span>
+<span class="n">off_nbbo_df</span> <span class="o">=</span> <span class="n">taq</span><span class="o">.</span><span class="n">get_official_complete_nbbo</span><span class="p">(</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2016</span><span class="p">,</span><span class="mi">12</span><span class="p">,</span><span class="mi">7</span><span class="p">),</span> <span class="p">[</span><span class="s1">&#39;IBM&#39;</span><span class="p">])</span>
+
+<span class="c1"># getting Realized Spreads and Price Impacts DataFrame using taqdaily instance</span>
+<span class="n">rs_pi_df</span> <span class="o">=</span> <span class="n">taq</span><span class="o">.</span><span class="n">compute_rs_and_pi</span><span class="p">(</span><span class="n">trade_and_nbbo_df</span><span class="o">=</span><span class="n">trade_and_nbbo_df</span><span class="p">,</span> <span class="n">off_nbbo_df</span><span class="o">=</span><span class="n">off_nbbo_df</span><span class="p">)</span>
+<span class="n">rs_pi_df</span>
+</pre></div>
+</div>
+<p>Both methods have the same output as below:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>timestamp</p></th>
+<th class="head"><p>symbol</p></th>
+<th class="head"><p>ex</p></th>
+<th class="head"><p>size</p></th>
+<th class="head"><p>price</p></th>
+<th class="head"><p>tr_seqnum</p></th>
+<th class="head"><p>best_bid</p></th>
+<th class="head"><p>best_bidsizeshares</p></th>
+<th class="head"><p>best_bidex</p></th>
+<th class="head"><p>best_ask</p></th>
+<th class="head"><p>best_asksizeshares</p></th>
+<th class="head"><p>best_askex</p></th>
+<th class="head"><p>qu_seqnum</p></th>
+<th class="head"><p>midpoint</p></th>
+<th class="head"><p>lock</p></th>
+<th class="head"><p>cross</p></th>
+<th class="head"><p>BuySellLR</p></th>
+<th class="head"><p>BuySellEMO</p></th>
+<th class="head"><p>BuySellCLNV</p></th>
+<th class="head"><p>dollar</p></th>
+<th class="head"><p>best_bid_next</p></th>
+<th class="head"><p>best_ask_next</p></th>
+<th class="head"><p>midpoint_next</p></th>
+<th class="head"><p>DollarRealizedSpread_LR5min</p></th>
+<th class="head"><p>PercentRealizedSpread_LR5min</p></th>
+<th class="head"><p>DollarPriceImpact_LR5min</p></th>
+<th class="head"><p>PercentPriceImpact_LR5min</p></th>
+<th class="head"><p>DollarRealizedSpread_EMO5min</p></th>
+<th class="head"><p>PercentRealizedSpread_EMO5min</p></th>
+<th class="head"><p>DollarPriceImpact_EMO5min</p></th>
+<th class="head"><p>PercentPriceImpact_EMO5min</p></th>
+<th class="head"><p>DollarRealizedSpread_CLNV5min</p></th>
+<th class="head"><p>PercentRealizedSpread_CLNV5min</p></th>
+<th class="head"><p>DollarPriceImpact_CLNV5min</p></th>
+<th class="head"><p>PercentPriceImpact_CLNV5min</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>2016-12-07 09:30:00.006411</p></td>
+<td><p>IBM</p></td>
+<td><p>P</p></td>
+<td><p>2</p></td>
+<td><p>160.6000</p></td>
+<td><p>2040</p></td>
+<td><p>160.43</p></td>
+<td><p>500.0</p></td>
+<td><p>Z</p></td>
+<td><p>160.60</p></td>
+<td><p>500.0</p></td>
+<td><p>P</p></td>
+<td><p>511415</p></td>
+<td><p>160.515</p></td>
+<td><p>0</p></td>
+<td><p>0</p></td>
+<td><p>1.0</p></td>
+<td><p>1.0</p></td>
+<td><p>1.0</p></td>
+<td><p>321.2000</p></td>
+<td><p>160.83</p></td>
+<td><p>160.87</p></td>
+<td><p>160.850</p></td>
+<td><p>-5.000000e-01</p></td>
+<td><p>-3.110904e-03</p></td>
+<td><p>6.700000e-01</p></td>
+<td><p>0.004170</p></td>
+<td><p>-5.000000e-01</p></td>
+<td><p>-3.110904e-03</p></td>
+<td><p>6.700000e-01</p></td>
+<td><p>0.004170</p></td>
+<td><p>-5.000000e-01</p></td>
+<td><p>-3.110904e-03</p></td>
+<td><p>6.700000e-01</p></td>
+<td><p>0.004170</p></td>
+</tr>
+<tr class="row-odd"><td><p>2016-12-07 09:30:00.006448</p></td>
+<td><p>IBM</p></td>
+<td><p>P</p></td>
+<td><p>2</p></td>
+<td><p>160.6000</p></td>
+<td><p>2041</p></td>
+<td><p>160.43</p></td>
+<td><p>500.0</p></td>
+<td><p>Z</p></td>
+<td><p>160.60</p></td>
+<td><p>500.0</p></td>
+<td><p>P</p></td>
+<td><p>511415</p></td>
+<td><p>160.515</p></td>
+<td><p>0</p></td>
+<td><p>0</p></td>
+<td><p>1.0</p></td>
+<td><p>1.0</p></td>
+<td><p>1.0</p></td>
+<td><p>321.2000</p></td>
+<td><p>160.83</p></td>
+<td><p>160.87</p></td>
+<td><p>160.850</p></td>
+<td><p>-5.000000e-01</p></td>
+<td><p>-3.110904e-03</p></td>
+<td><p>6.700000e-01</p></td>
+<td><p>0.004170</p></td>
+<td><p>-5.000000e-01</p></td>
+<td><p>-3.110904e-03</p></td>
+<td><p>6.700000e-01</p></td>
+<td><p>0.004170</p></td>
+<td><p>-5.000000e-01</p></td>
+<td><p>-3.110904e-03</p></td>
+<td><p>6.700000e-01</p></td>
+<td><p>0.004170</p></td>
+</tr>
+<tr class="row-even"><td><p>2016-12-07 09:30:00.019109</p></td>
+<td><p>IBM</p></td>
+<td><p>T</p></td>
+<td><p>75</p></td>
+<td><p>160.6000</p></td>
+<td><p>2050</p></td>
+<td><p>160.43</p></td>
+<td><p>500.0</p></td>
+<td><p>Z</p></td>
+<td><p>160.60</p></td>
+<td><p>500.0</p></td>
+<td><p>P</p></td>
+<td><p>511415</p></td>
+<td><p>160.515</p></td>
+<td><p>0</p></td>
+<td><p>0</p></td>
+<td><p>1.0</p></td>
+<td><p>1.0</p></td>
+<td><p>1.0</p></td>
+<td><p>12045.0000</p></td>
+<td><p>160.83</p></td>
+<td><p>160.87</p></td>
+<td><p>160.850</p></td>
+<td><p>-5.000000e-01</p></td>
+<td><p>-3.110904e-03</p></td>
+<td><p>6.700000e-01</p></td>
+<td><p>0.004170</p></td>
+<td><p>-5.000000e-01</p></td>
+<td><p>-3.110904e-03</p></td>
+<td><p>6.700000e-01</p></td>
+<td><p>0.004170</p></td>
+<td><p>-5.000000e-01</p></td>
+<td><p>-3.110904e-03</p></td>
+<td><p>6.700000e-01</p></td>
+<td><p>0.004170</p></td>
+</tr>
+<tr class="row-odd"><td><p>2016-12-07 09:30:00.019129</p></td>
+<td><p>IBM</p></td>
+<td><p>T</p></td>
+<td><p>37</p></td>
+<td><p>160.6000</p></td>
+<td><p>2051</p></td>
+<td><p>160.43</p></td>
+<td><p>500.0</p></td>
+<td><p>Z</p></td>
+<td><p>160.60</p></td>
+<td><p>500.0</p></td>
+<td><p>P</p></td>
+<td><p>511415</p></td>
+<td><p>160.515</p></td>
+<td><p>0</p></td>
+<td><p>0</p></td>
+<td><p>1.0</p></td>
+<td><p>1.0</p></td>
+<td><p>1.0</p></td>
+<td><p>5942.2000</p></td>
+<td><p>160.83</p></td>
+<td><p>160.87</p></td>
+<td><p>160.850</p></td>
+<td><p>-5.000000e-01</p></td>
+<td><p>-3.110904e-03</p></td>
+<td><p>6.700000e-01</p></td>
+<td><p>0.004170</p></td>
+<td><p>-5.000000e-01</p></td>
+<td><p>-3.110904e-03</p></td>
+<td><p>6.700000e-01</p></td>
+<td><p>0.004170</p></td>
+<td><p>-5.000000e-01</p></td>
+<td><p>-3.110904e-03</p></td>
+<td><p>6.700000e-01</p></td>
+<td><p>0.004170</p></td>
+</tr>
+<tr class="row-even"><td><p>2016-12-07 09:30:00.081717</p></td>
+<td><p>IBM</p></td>
+<td><p>T</p></td>
+<td><p>112</p></td>
+<td><p>160.6000</p></td>
+<td><p>2084</p></td>
+<td><p>160.43</p></td>
+<td><p>500.0</p></td>
+<td><p>Z</p></td>
+<td><p>160.60</p></td>
+<td><p>500.0</p></td>
+<td><p>P</p></td>
+<td><p>511415</p></td>
+<td><p>160.515</p></td>
+<td><p>0</p></td>
+<td><p>0</p></td>
+<td><p>1.0</p></td>
+<td><p>1.0</p></td>
+<td><p>1.0</p></td>
+<td><p>17987.2000</p></td>
+<td><p>160.83</p></td>
+<td><p>160.87</p></td>
+<td><p>160.850</p></td>
+<td><p>-5.000000e-01</p></td>
+<td><p>-3.110904e-03</p></td>
+<td><p>6.700000e-01</p></td>
+<td><p>0.004170</p></td>
+<td><p>-5.000000e-01</p></td>
+<td><p>-3.110904e-03</p></td>
+<td><p>6.700000e-01</p></td>
+<td><p>0.004170</p></td>
+<td><p>-5.000000e-01</p></td>
+<td><p>-3.110904e-03</p></td>
+<td><p>6.700000e-01</p></td>
+<td><p>0.004170</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="average">
+<h2>Average<a class="headerlink" href="#average" title="Permalink to this heading"></a></h2>
+<p><strong>Example 3:</strong> Also, we can calculate Simple (Ave), Dollar-Weighted (DW), and Share-Weighted (SW) <a class="reference internal" href="averages.html#id1"><span class="std std-ref">averages</span></a> of Realized Spreads and Price Impacts:</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># measurse to alculate average</span>
+<span class="n">measures</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;DollarRealizedSpread_LR5min&#39;</span><span class="p">,</span> <span class="s1">&#39;PercentRealizedSpread_LR5min&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;DollarPriceImpact_LR5min&#39;</span><span class="p">,</span> <span class="s1">&#39;PercentPriceImpact_LR5min&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;DollarRealizedSpread_EMO5min&#39;</span><span class="p">,</span> <span class="s1">&#39;PercentRealizedSpread_EMO5min&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;DollarPriceImpact_EMO5min&#39;</span><span class="p">,</span> <span class="s1">&#39;PercentPriceImpact_EMO5min&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;DollarRealizedSpread_CLNV5min&#39;</span><span class="p">,</span> <span class="s1">&#39;PercentRealizedSpread_CLNV5min&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;DollarPriceImpact_CLNV5min&#39;</span><span class="p">,</span> <span class="s1">&#39;PercentPriceImpact_CLNV5min&#39;</span><span class="p">]</span>
+
+<span class="c1"># getting averages of Realized Spreads and Price Impacts based on LR, EMO, CLNV</span>
+<span class="n">rs_pi_ave</span> <span class="o">=</span> <span class="n">taq</span><span class="o">.</span><span class="n">taq</span><span class="o">.</span><span class="n">compute_averages_ave_sw_dw</span><span class="p">(</span><span class="n">rs_pi_df</span><span class="p">,</span> <span class="n">measures</span><span class="p">)</span>
+<span class="n">rs_pi_ave</span>
+</pre></div>
+</div>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>DollarRealizedSpread_LR5min_Ave</p></th>
+<th class="head"><p>DollarRealizedSpread_LR5min_DW</p></th>
+<th class="head"><p>DollarRealizedSpread_LR5min_SW</p></th>
+<th class="head"><p>PercentRealizedSpread_LR5min_Ave</p></th>
+<th class="head"><p>PercentRealizedSpread_LR5min_DW</p></th>
+<th class="head"><p>PercentRealizedSpread_LR5min_SW</p></th>
+<th class="head"><p>DollarPriceImpact_LR5min_Ave</p></th>
+<th class="head"><p>DollarPriceImpact_LR5min_DW</p></th>
+<th class="head"><p>DollarPriceImpact_LR5min_SW</p></th>
+<th class="head"><p>PercentPriceImpact_LR5min_Ave</p></th>
+<th class="head"><p>PercentPriceImpact_LR5min_DW</p></th>
+<th class="head"><p>PercentPriceImpact_LR5min_SW</p></th>
+<th class="head"><p>DollarRealizedSpread_EMO5min_Ave</p></th>
+<th class="head"><p>DollarRealizedSpread_EMO5min_DW</p></th>
+<th class="head"><p>DollarRealizedSpread_EMO5min_SW</p></th>
+<th class="head"><p>PercentRealizedSpread_EMO5min_Ave</p></th>
+<th class="head"><p>PercentRealizedSpread_EMO5min_DW</p></th>
+<th class="head"><p>PercentRealizedSpread_EMO5min_SW</p></th>
+<th class="head"><p>DollarPriceImpact_EMO5min_Ave</p></th>
+<th class="head"><p>DollarPriceImpact_EMO5min_DW</p></th>
+<th class="head"><p>DollarPriceImpact_EMO5min_SW</p></th>
+<th class="head"><p>PercentPriceImpact_EMO5min_Ave</p></th>
+<th class="head"><p>PercentPriceImpact_EMO5min_DW</p></th>
+<th class="head"><p>PercentPriceImpact_EMO5min_SW</p></th>
+<th class="head"><p>DollarRealizedSpread_CLNV5min_Ave</p></th>
+<th class="head"><p>DollarRealizedSpread_CLNV5min_DW</p></th>
+<th class="head"><p>DollarRealizedSpread_CLNV5min_SW</p></th>
+<th class="head"><p>PercentRealizedSpread_CLNV5min_Ave</p></th>
+<th class="head"><p>PercentRealizedSpread_CLNV5min_DW</p></th>
+<th class="head"><p>PercentRealizedSpread_CLNV5min_SW</p></th>
+<th class="head"><p>DollarPriceImpact_CLNV5min_Ave</p></th>
+<th class="head"><p>DollarPriceImpact_CLNV5min_DW</p></th>
+<th class="head"><p>DollarPriceImpact_CLNV5min_SW</p></th>
+<th class="head"><p>PercentPriceImpact_CLNV5min_Ave</p></th>
+<th class="head"><p>PercentPriceImpact_CLNV5min_DW</p></th>
+<th class="head"><p>PercentPriceImpact_CLNV5min_SW</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>-0.01708</p></td>
+<td><p>-0.018547</p></td>
+<td><p>-0.018522</p></td>
+<td><p>-0.000105</p></td>
+<td><p>-0.000114</p></td>
+<td><p>-0.000113</p></td>
+<td><p>0.03844</p></td>
+<td><p>0.039654</p></td>
+<td><p>0.039669</p></td>
+<td><p>0.000236</p></td>
+<td><p>0.000243</p></td>
+<td><p>0.000243</p></td>
+<td><p>-0.014481</p></td>
+<td><p>-0.020958</p></td>
+<td><p>-0.021005</p></td>
+<td><p>-0.000089</p></td>
+<td><p>-0.000129</p></td>
+<td><p>-0.000129</p></td>
+<td><p>0.032667</p></td>
+<td><p>0.03822</p></td>
+<td><p>0.038286</p></td>
+<td><p>0.0002</p></td>
+<td><p>0.000234</p></td>
+<td><p>0.000235</p></td>
+<td><p>-0.018017</p></td>
+<td><p>-0.024185</p></td>
+<td><p>-0.024349</p></td>
+<td><p>-0.000111</p></td>
+<td><p>-0.000149</p></td>
+<td><p>-0.00015</p></td>
+<td><p>0.038344</p></td>
+<td><p>0.04373</p></td>
+<td><p>0.043921</p></td>
+<td><p>0.000236</p></td>
+<td><p>0.000269</p></td>
+<td><p>0.00027</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="effective%20spreads.html" class="btn btn-neutral float-left" title="Effective Spreads" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021, Vincent Grégoire.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
