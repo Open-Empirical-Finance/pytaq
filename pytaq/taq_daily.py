@@ -8,18 +8,12 @@ Created on Mon Jul  6 17:32:02 2020
 
 import pandas as pd
 import numpy as np
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 
 
 class TaqDaily():
     def __init__(self, method=None, db=None, track_retail=False):
-        if method == 'PostgreSQL':
-            self.method = method
-            self.db = db
-        elif method == 'SASPy':
-            self.method = method
-            self.db = db
-        elif method == 'Parquet': # Local files
+        if (method == 'PostgreSQL') | (method == 'SASPy'):
             self.method = method
             self.db = db
         elif method is None:
@@ -85,7 +79,7 @@ class TaqDaily():
     
     
 #%%  NBBO PostgreSQL query
-    def get_nbbo_table_postgresql(self, date, symbols=None, common_only=True):
+    def get_nbbo_table_postgresql(self, date, symbols=None):
         nbbo_table = 'nbbom_' + date.strftime('%Y%m%d')
 
         # Columns to retreive from database
@@ -114,7 +108,7 @@ class TaqDaily():
     
 #%%  NBBO sas query
 
-    def get_nbbo_table_saspy(self, date, symbols=None, common_only=True):
+    def get_nbbo_table_saspy(self, date, symbols=None):
         nbbo_table = 'nbbom_' + date.strftime('%Y%m%d')
 
         # Columns to retreive from database
@@ -145,14 +139,11 @@ class TaqDaily():
 #%%  NBBO
     # TODO: add support for other than common stocks
     #       Add step 4 (changes only)
-    def get_nbbo_table(self, date, symbols=None, common_only=True,
-                       output_flags=False):
+    def get_nbbo_table(self, date, symbols=None, output_flags=False):
         if self.method == 'PostgreSQL':
-            df = self.get_nbbo_table_postgresql(date, symbols, common_only)  
+            df = self.get_nbbo_table_postgresql(date, symbols)  
         elif self.method == 'SASPy':
-            df = self.get_nbbo_table_saspy(date, symbols, common_only)
-        elif self.method == 'Parquet':
-            raise Exception('Method Parquet not supported for get_nbbo_table()')
+            df = self.get_nbbo_table_saspy(date, symbols)
         elif self.method is None:
             raise Exception('Method needed for get_nbbo_table()')
         else:
@@ -269,7 +260,7 @@ class TaqDaily():
     
     #%% Quotes PostgreSQL
     
-    def get_quote_table_postgresql(self, date, symbols=None, common_only=True):
+    def get_quote_table_postgresql(self, date, symbols=None):
         quote_table = 'cqm_' + date.strftime('%Y%m%d')
         
         quote_cols = ['date', 'time_m', 'ex', 'sym_root', 'sym_suffix', 'bid',
@@ -298,7 +289,7 @@ class TaqDaily():
 
     #%% Quotes saspy
     
-    def get_quote_table_saspy(self, date, symbols=None, common_only=True):
+    def get_quote_table_saspy(self, date, symbols=None):
         quote_table = 'cqm_' + date.strftime('%Y%m%d')
         
         quote_cols = ['date', 'time_m', 'ex', 'sym_root', 'sym_suffix', 'bid',
@@ -327,14 +318,11 @@ class TaqDaily():
     
     #%% Quotes
     
-    def get_quote_table(self, date, symbols=None, common_only=True,
-                        nbbo_only=True, output_flags=False):
+    def get_quote_table(self, date, symbols=None, nbbo_only=True, output_flags=False):
         if self.method == 'PostgreSQL':
-            df = self.get_quote_table_postgresql(date, symbols, common_only)  
+            df = self.get_quote_table_postgresql(date, symbols)  
         elif self.method == 'SASPy':
-            df = self.get_quote_table_saspy(date, symbols, common_only)
-        elif self.method == 'Parquet':
-            raise Exception('Method Parquet not supported for get_quote_table()')
+            df = self.get_quote_table_saspy(date, symbols)
         elif self.method is None:
             raise Exception('Method needed for get_quote_table()')
         else:
@@ -409,8 +397,7 @@ class TaqDaily():
     
     #%% Trades PostgreSQL
     
-    def get_trade_table_postgresql(self, date, symbols=None, common_only=True,
-                                   get_cond=False):
+    def get_trade_table_postgresql(self, date, symbols=None, get_cond=False):
         trade_table = 'ctm_' + date.strftime('%Y%m%d')
         
         trade_cols = ['date', 'time_m', 'ex', 'sym_root', 'sym_suffix',
@@ -443,8 +430,7 @@ class TaqDaily():
 
     #%% Trades SASPy
     
-    def get_trade_table_saspy(self, date, symbols=None, common_only=True,
-                              get_cond=False):
+    def get_trade_table_saspy(self, date, symbols=None, get_cond=False):
         trade_table = 'ctm_' + date.strftime('%Y%m%d')
         
         trade_cols = ['date', 'time_m', 'ex', 'sym_root', 'sym_suffix',
@@ -456,9 +442,9 @@ class TaqDaily():
                     ' (keep = ' + ' '.join(trade_cols) + ')'
                     ';\n where sym_root in ("' + '","'.join(symbols) + 
                     '") and sym_suffix = ""  AND tr_corr = "00" AND price > 0 and ((' +
-                    self.time_to_sql(self.start_time_quotes) + 
+                    self.time_to_sql(self.start_time_trades) + 
                     't) <= time_m <= (' +
-                    self.time_to_sql(self.end_time_quotes) +
+                    self.time_to_sql(self.end_time_trades) +
                     't));\n run;')
 
         self.db.submit(sas_proc)
@@ -472,16 +458,11 @@ class TaqDaily():
 
     #%% Trades
      
-    def get_trade_table(self, date, symbols=None, common_only=True,
-                        get_cond=False):
+    def get_trade_table(self, date, symbols=None, get_cond=False):
         if self.method == 'PostgreSQL':
-            df = self.get_trade_table_postgresql(date, symbols, common_only,
-                                                 get_cond)  
+            df = self.get_trade_table_postgresql(date, symbols, get_cond)  
         elif self.method == 'SASPy':
-            df = self.get_trade_table_saspy(date, symbols, common_only, 
-                                            get_cond) 
-        elif self.method == 'Parquet':
-            raise Exception('Method Parquet not supported for get_trade_table()')
+            df = self.get_trade_table_saspy(date, symbols, get_cond)
         elif self.method is None:
             raise Exception('Method needed for get_trade_table()')
         else:
@@ -507,27 +488,91 @@ class TaqDaily():
         
         return df[trade_out_cols]
     
+    #%% Official Complete NBBO PostgreSQL
+    
+    def get_official_complete_nbbo_postgresql(self, date, symbols=None):
+        nbbo_table = 'complete_nbbo_' + date.strftime('%Y%m%d')
+
+        # Columns to retreive from database
+        nbbo_cols = ['date', 'time_m', 'sym_root', 'sym_suffix', 'best_bid',
+                     'best_bidsizeshares', 'best_ask', 'best_asksizeshares']
+
+        select_cond = ('SELECT ' + ', '.join(nbbo_cols) + ' FROM ' +
+                        self.taq_library + '.' + nbbo_table)
+
+        # This is for common stocks only, can tweak to have other symbols
+        if symbols is not None:
+            symbol_cond = (" WHERE sym_root IN ('" + "','".join(symbols) +
+                            "') AND sym_suffix IS NULL")
+        else:
+            symbol_cond = (' WHERE sym_suffix IS NULL')
+
+        # Retreive quotes during normal trading hours, starting before market
+        # open to ensure we have NBBO quotes at the beginning of the day.
+        time_cond = (' AND (time_m BETWEEN ' +
+                        self.time_to_sql(self.start_time_quotes, "'") + ' AND ' +
+                        self.time_to_sql(self.end_time_quotes, "'") + ')')
+
+        sql_query = select_cond + symbol_cond + time_cond
+        return self.db.raw_sql(sql_query)
+    
+    #%% Official Complete NBBO SASPy
+    
+    def get_official_complete_nbbo_saspy(self, date, symbols=None):
+        nbbo_table = 'complete_nbbo_' + date.strftime('%Y%m%d')
+
+        # Columns to retreive from database
+        nbbo_cols = ['date', 'time_m', 'sym_root', 'sym_suffix', 'best_bid',
+                     'best_bidsizeshares', 'best_ask', 'best_asksizeshares']
+
+
+        sas_proc = ('data DailyNBBO;\n set taqmsec.' + nbbo_table +
+                    ' (keep = ' + ' '.join(nbbo_cols) + 
+                    ');\n where sym_root in ("' + '","'.join(symbols) + 
+                    '") and sym_suffix = "" and ((' + 
+                    self.time_to_sql(self.start_time_quotes) + 
+                    't) <= time_m <= (' +
+                    self.time_to_sql(self.end_time_quotes) +
+                    't));\n run;')
+
+        self.db.submit(sas_proc)
+        sas_nbbo = self.db.sasdata(libref='work', table='DailyNBBO')
+        df = sas_nbbo.to_df()
+        df.columns = [c.lower() for c in df.columns]
+        
+        df['time_m'] = df.time_m.dt.time
+        
+        return df    
+    
     #%% Official Complete NBBO
     
     def get_official_complete_nbbo(self, date=None, symbols=None,
                                    nbbo_df=None, quote_df=None):
-        if nbbo_df is None:
-            nbbo_df = self.get_nbbo_table(date, symbols)
-        if quote_df is None:
-            quote_df = self.get_quote_table(date, symbols)
-    
-        # Note: Could use append() instead of concat()
-        # df = nbbo_df.append(quote_df)
-        df = pd.concat([nbbo_df, quote_df])
+        if (nbbo_df is None) | (quote_df is None):
+            if self.method == 'PostgreSQL':
+                df = self.get_official_complete_nbbo_postgresql(date, symbols)  
+            elif self.method == 'SASPy':
+                df = self.get_official_complete_nbbo_saspy(date, symbols) 
+            elif self.method is None:
+                raise Exception('Method needed for get_official_complete_nbbo()')
+            else:
+                raise Exception('Unknown method for TaqDaily: ' + str(self.method))
+            # Merge date and time
+            df['timestamp'] = df[['date', 'time_m']].apply(
+            lambda x: datetime.combine(x['date'], x['time_m']), axis=1)
+            df = self.clean_official_complete_nbbo(df)
+        else:
+            # Note: Could use append() instead of concat()
+            # df = nbbo_df.append(quote_df)
+            df = pd.concat([nbbo_df, quote_df])
+            df = df.sort_values(['symbol', 'timestamp', 'qu_seqnum'])
     
         # Remove duplicate quotes at same microsecond (keep last one based
         # on sequence number)
-        df = df.sort_values(['symbol', 'timestamp', 'qu_seqnum'])
         
         if self.keep_changes_only:
             df = df.groupby(['symbol', 'timestamp']).last().reset_index()
-        
-        
+              
         # # Drop obs with no change in obs.
         # df = df.groupby(['symbol', 'best_bid', 'best_bidsizeshares',
         #                  'best_bidex', 'best_ask', 'best_asksizeshares',
@@ -535,23 +580,43 @@ class TaqDaily():
     
         return df
     
+    def clean_official_complete_nbbo(self, df):
+        # Post-SQL query cleanup
+        
+        # Merge symbol
+        df['symbol'] = df['sym_root']
+        sel = df.sym_suffix.notnull()
+        df.loc[sel, 'symbol'] = (df.loc[sel, 'sym_root'] + ' ' + 
+                                 df.loc[sel, 'sym_suffix'])
+        
+        # Keep only relevant columns
+        # Columns to output
+        nbbo_out_cols = ['timestamp', 'symbol', 'best_bid', 'best_bidsizeshares',
+                         'best_ask', 'best_asksizeshares']
+        
+        df = df.sort_values(['symbol', 'timestamp'])
+        
+        return df[nbbo_out_cols]
+    
     #%% Spreads and depths
 
-    def compute_spreads(self, date, off_nbbo_df, start_time_spreads=None,
+    def compute_spreads(self, date=None, symbols=None, off_nbbo_df=None, start_time_spreads=None,
                         end_time_spreads=None):
         
-        if len(off_nbbo_df) == 0:
-            return None
+        if off_nbbo_df is None:
+            off_nbbo_df = self.get_official_complete_nbbo(date=date, symbols=symbols)
+        
         if start_time_spreads is None:
             start_time_spreads = self.start_time_trades
         if end_time_spreads is None:
             end_time_spreads = self.end_time_trades
             
-        
         sel = ((off_nbbo_df.timestamp.dt.time >= start_time_spreads) &
                (off_nbbo_df.timestamp.dt.time < end_time_spreads))
-
         df = off_nbbo_df[sel].copy()
+        
+        if len(df) == 0:
+            return None
         
         # Compute time between each quote
         df['inforce'] = df.groupby(['symbol'])['timestamp'].diff().dt.total_seconds()
@@ -559,7 +624,7 @@ class TaqDaily():
         # The entries for last quote of the day are missing.
         sel = df.inforce.isnull()
         df.loc[sel, 'inforce'] = np.abs(
-            (datetime.combine(date, end_time_spreads) -
+            (datetime.combine(df.timestamp.iloc[-1].date(), end_time_spreads) -
              df.loc[sel, 'timestamp']).dt.total_seconds())
     
         # Delete locked and crossed quotes
@@ -597,9 +662,14 @@ class TaqDaily():
     #%%% Merge trades and NBBO
     # We merge the quote in effect at trade time
     
-    def merge_trades_nbbo(self, trade_df, off_nbbo_df, track_retail=None):
+    def merge_trades_nbbo(self, date=None, symbols=None, trade_df=None, off_nbbo_df=None, track_retail=None):
         if track_retail is None:
             track_retail = self.track_retail
+
+        if trade_df is None:
+            trade_df = self.get_trade_table(date=date, symbols=symbols)
+        if off_nbbo_df is None:
+            off_nbbo_df = self.get_official_complete_nbbo(date=date, symbols=symbols)
 
         trade_df = trade_df.sort_values(['timestamp', 'symbol'])
         off_nbbo_df = off_nbbo_df.sort_values(['timestamp', 'symbol'])
@@ -684,12 +754,15 @@ class TaqDaily():
     
     #%%%% Effective spreads
     
-    def compute_effective_spreads(self, trade_and_nbbo_df):
-        df = trade_and_nbbo_df.copy()
-        
+    def compute_effective_spreads(self, date=None, symbols=None, trade_and_nbbo_df=None):
+        if trade_and_nbbo_df is None:
+            df = self.merge_trades_nbbo(date=date, symbols=symbols)
+        else:
+            df = trade_and_nbbo_df.copy()
+    
         sel = ((df.cross == 1) | (df.lock == 1))
         df = df[~sel]
-    
+        
         df['DollarEffectiveSpread'] = np.abs(df['price'] - df['midpoint']) * 2
         df['PercentEffectiveSpread'] = (np.abs(np.log(df['price']) - 
                                                 np.log(df['midpoint'])) * 2)
@@ -697,8 +770,13 @@ class TaqDaily():
             
     #%%%% Realized spread and price impact
     
-    def compute_rs_and_pi(self, trade_and_nbbo_df, off_nbbo_df, delay, suffix,
-                          track_retail=None):
+    def compute_rs_and_pi(self, date=None, symbols=None, trade_and_nbbo_df=None, off_nbbo_df=None,
+                          delay=timedelta(minutes=5), suffix='5min', track_retail=None):
+        if off_nbbo_df is None:
+            off_nbbo_df = self.get_official_complete_nbbo(date=date, symbols=symbols)
+        if trade_and_nbbo_df is None:
+            trade_and_nbbo_df = self.merge_trades_nbbo(date=date,symbols=symbols,off_nbbo_df=off_nbbo_df)
+            
         if track_retail is None:
             track_retail = self.track_retail
         next_df = off_nbbo_df[['timestamp', 'symbol',
@@ -713,11 +791,11 @@ class TaqDaily():
         df = pd.merge_asof(trade_and_nbbo_df, next_df, on='timestamp',
                               by='symbol', allow_exact_matches=False,
                               suffixes=('','_next'))
-        
+    
         sel = ((df.best_bid_next == df.best_ask_next) |
                 (df.best_bid_next > df.best_ask_next))
         df = df[~sel]
-    
+        
         signs = ['LR', 'EMO', 'CLNV']
         if track_retail:
             signs += ['BJZ'] + [x + 'notBJZ' for x in signs]
