@@ -1,7 +1,0 @@
-RA_VincentGregoire
-==================
-
-.. toctree::
-   :maxdepth: 4
-
-   taq_daily
