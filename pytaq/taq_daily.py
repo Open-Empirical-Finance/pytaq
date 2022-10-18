@@ -600,7 +600,7 @@ class TaqDaily():
     
     #%% Spreads and depths
 
-    def compute_spreads(self, date=None, symbols=None, off_nbbo_df=None, start_time_spreads=None,
+    def compute_spreads(self, date, symbols=None, off_nbbo_df=None, start_time_spreads=None,
                         end_time_spreads=None):
         
         if off_nbbo_df is None:
@@ -624,7 +624,7 @@ class TaqDaily():
         # The entries for last quote of the day are missing.
         sel = df.inforce.isnull()
         df.loc[sel, 'inforce'] = np.abs(
-            (datetime.combine(df.timestamp.iloc[-1].date(), end_time_spreads) -
+            (datetime.combine(date, end_time_spreads) -
              df.loc[sel, 'timestamp']).dt.total_seconds())
     
         # Delete locked and crossed quotes
