@@ -10,6 +10,8 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, time, timedelta
 
+from utils.time_to_sql import time_to_sql
+
 
 class TaqDaily:
     def __init__(self, method=None, db=None, track_retail=False):
@@ -45,18 +47,6 @@ class TaqDaily:
 
         # Should we compute trade sign for retail trades
         self.track_retail = track_retail
-
-    def time_to_sql(self, x, quote='"'):
-        out = (
-            str(x.hour).zfill(2)
-            + ":"
-            + str(x.minute).zfill(2)
-            + ":"
-            + str(x.second).zfill(2)
-            + "."
-            + str(int(np.round(x.microsecond / 1000))).zfill(3)
-        )
-        return quote + out + quote
 
     #%%  Symbols SASPy query
     def get_nbbo_symbols_saspy(self, date):
@@ -132,9 +122,9 @@ class TaqDaily:
         # open to ensure we have NBBO quotes at the beginning of the day.
         time_cond = (
             " AND (time_m BETWEEN "
-            + self.time_to_sql(self.start_time_quotes, "'")
+            + time_to_sql(self.start_time_quotes, "'")
             + " AND "
-            + self.time_to_sql(self.end_time_quotes, "'")
+            + time_to_sql(self.end_time_quotes, "'")
             + ")"
         )
 
@@ -171,9 +161,9 @@ class TaqDaily:
             + ');\n where sym_root in ("'
             + '","'.join(symbols)
             + '") and sym_suffix = "" and (('
-            + self.time_to_sql(self.start_time_quotes)
+            + time_to_sql(self.start_time_quotes)
             + "t) <= time_m <= ("
-            + self.time_to_sql(self.end_time_quotes)
+            + time_to_sql(self.end_time_quotes)
             + "t));\n run;"
         )
 
@@ -372,9 +362,9 @@ class TaqDaily:
         # open to ensure we have NBBO quotes at the beginning of the day.
         time_cond = (
             " AND (time_m BETWEEN "
-            + self.time_to_sql(self.start_time_quotes, "'")
+            + time_to_sql(self.start_time_quotes, "'")
             + " AND "
-            + self.time_to_sql(self.end_time_quotes, "'")
+            + time_to_sql(self.end_time_quotes, "'")
             + ")"
         )
 
@@ -412,9 +402,9 @@ class TaqDaily:
             + ';\n where sym_root in ("'
             + '","'.join(symbols)
             + '") and sym_suffix = "" and (('
-            + self.time_to_sql(self.start_time_quotes)
+            + time_to_sql(self.start_time_quotes)
             + "t) <= time_m <= ("
-            + self.time_to_sql(self.end_time_quotes)
+            + time_to_sql(self.end_time_quotes)
             + "t));\n run;"
         )
 
@@ -564,9 +554,9 @@ class TaqDaily:
         # open to ensure we have NBBO quotes at the beginning of the day.
         time_cond = (
             " AND (time_m BETWEEN "
-            + self.time_to_sql(self.start_time_trades, "'")
+            + time_to_sql(self.start_time_trades, "'")
             + " AND "
-            + self.time_to_sql(self.end_time_trades, "'")
+            + time_to_sql(self.end_time_trades, "'")
             + ")"
         )
 
@@ -604,9 +594,9 @@ class TaqDaily:
             ';\n where sym_root in ("'
             + '","'.join(symbols)
             + '") and sym_suffix = ""  AND tr_corr = "00" AND price > 0 and (('
-            + self.time_to_sql(self.start_time_trades)
+            + time_to_sql(self.start_time_trades)
             + "t) <= time_m <= ("
-            + self.time_to_sql(self.end_time_trades)
+            + time_to_sql(self.end_time_trades)
             + "t));\n run;"
         )
 
@@ -691,9 +681,9 @@ class TaqDaily:
         # open to ensure we have NBBO quotes at the beginning of the day.
         time_cond = (
             " AND (time_m BETWEEN "
-            + self.time_to_sql(self.start_time_quotes, "'")
+            + time_to_sql(self.start_time_quotes, "'")
             + " AND "
-            + self.time_to_sql(self.end_time_quotes, "'")
+            + time_to_sql(self.end_time_quotes, "'")
             + ")"
         )
 
@@ -725,9 +715,9 @@ class TaqDaily:
             + ');\n where sym_root in ("'
             + '","'.join(symbols)
             + '") and sym_suffix = "" and (('
-            + self.time_to_sql(self.start_time_quotes)
+            + time_to_sql(self.start_time_quotes)
             + "t) <= time_m <= ("
-            + self.time_to_sql(self.end_time_quotes)
+            + time_to_sql(self.end_time_quotes)
             + "t));\n run;"
         )
 
