@@ -20,7 +20,7 @@ class TaqDaily:
             self.method = method
             self.db = None
         else:
-            raise Exception("Unknown method for TaqDaily: " + str(method))
+            raise ValueError(f"Unknown method for TaqDaily: {str(method)}")
 
         self.taq_library = "taqmsec"
 
@@ -72,19 +72,21 @@ class TaqDaily:
         self.db.submit(sas_proc)
         sas_symbols = self.db.sasdata(libref="work", table="symbols")
         df = sas_symbols.to_df()
-        return [x for x in df.symbol.unique()]
+        return list(df.symbol.unique())
 
     #%%  Get symbol list from nbbo table
     def get_nbbo_symbols(self, date):
         if self.method == "PostgreSQL":
             # TODO
-            raise Exception("Method PostgreSQL not supported for get_nbbo_symbols()")
+            raise NotImplementedError(
+                "Method PostgreSQL not yet supported for get_nbbo_symbols()"
+            )
         elif self.method == "SASPy":
             return self.get_nbbo_symbols_saspy(date)
         elif self.method is None:
-            raise Exception("Method needed for get_nbbo_symbols()")
+            raise ValueError("Method needed for get_nbbo_symbols()")
         else:
-            raise Exception("Unknown method for TaqDaily: " + str(self.method))
+            raise ValueError(f"Unknown method for TaqDaily: {str(self.method)}")
 
     #%%  NBBO PostgreSQL query
     def get_nbbo_table_postgresql(self, date, symbols=None):
@@ -193,9 +195,9 @@ class TaqDaily:
         elif self.method == "SASPy":
             df = self.get_nbbo_table_saspy(date, symbols)
         elif self.method is None:
-            raise Exception("Method needed for get_nbbo_table()")
+            raise ValueError("Method needed for get_nbbo_table()")
         else:
-            raise Exception("Unknown method for TaqDaily: " + str(self.method))
+            raise ValueError(f"Unknown method for TaqDaily: {str(self.method)}")
 
         # Merge date and time
         df["timestamp"] = df[["date", "time_m"]].apply(
@@ -377,8 +379,7 @@ class TaqDaily:
         )
 
         sql_query = select_cond + symbol_cond + time_cond
-        df = self.db.raw_sql(sql_query)
-        return df
+        return self.db.raw_sql(sql_query)
 
     #%% Quotes saspy
 
@@ -434,9 +435,9 @@ class TaqDaily:
         elif self.method == "SASPy":
             df = self.get_quote_table_saspy(date, symbols)
         elif self.method is None:
-            raise Exception("Method needed for get_quote_table()")
+            raise ValueError("Method needed for get_quote_table()")
         else:
-            raise Exception("Unknown method for TaqDaily: " + str(self.method))
+            raise ValueError(f"Unknown method for TaqDaily: {str(self.method)}")
 
         # Merge date and time
         df["timestamp"] = df[["date", "time_m"]].apply(
@@ -573,8 +574,7 @@ class TaqDaily:
         trade_cond = " AND tr_corr = '00' AND price > 0"
 
         sql_query = select_cond + symbol_cond + trade_cond + time_cond
-        df = self.db.raw_sql(sql_query)
-        return df
+        return self.db.raw_sql(sql_query)
 
     #%% Trades SASPy
 
@@ -627,9 +627,9 @@ class TaqDaily:
         elif self.method == "SASPy":
             df = self.get_trade_table_saspy(date, symbols, get_cond)
         elif self.method is None:
-            raise Exception("Method needed for get_trade_table()")
+            raise ValueError("Method needed for get_trade_table()")
         else:
-            raise Exception("Unknown method for TaqDaily: " + str(self.method))
+            raise ValueError(f"Unknown method for TaqDaily: {str(self.method)}")
 
         # Merge date and time
         df["timestamp"] = df[["date", "time_m"]].apply(
@@ -751,9 +751,9 @@ class TaqDaily:
             elif self.method == "SASPy":
                 df = self.get_official_complete_nbbo_saspy(date, symbols)
             elif self.method is None:
-                raise Exception("Method needed for get_official_complete_nbbo()")
+                raise ValueError("Method needed for get_official_complete_nbbo()")
             else:
-                raise Exception("Unknown method for TaqDaily: " + str(self.method))
+                raise ValueError(f"Unknown method for TaqDaily: {str(self.method)}")
             # Merge date and time
             df["timestamp"] = df[["date", "time_m"]].apply(
                 lambda x: datetime.combine(x["date"], x["time_m"]), axis=1
@@ -1086,17 +1086,17 @@ class TaqDaily:
                 if simple:
                     try:
                         out[m + "_Ave"] = np.average(y[m], axis=0)
-                    except:
+                    except Exception:
                         out[m + "_Ave"] = np.nan
                 if dollar_weighted:
                     try:
                         out[m + "_DW"] = np.average(y[m], weights=y["dollar"], axis=0)
-                    except:
+                    except Exception:
                         out[m + "_DW"] = np.nan
                 if share_weighted:
                     try:
                         out[m + "_SW"] = np.average(y[m], weights=y["size"], axis=0)
-                    except:
+                    except Exception:
                         out[m + "_SW"] = np.nan
             return pd.Series(out)
 
