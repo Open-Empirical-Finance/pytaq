@@ -971,22 +971,3 @@ class TaqDaily:
         df["dollar"] = df["price"] * df["size"]
 
         return df
-
-    #%%%% Effective spreads
-
-    def compute_effective_spreads(
-        self, date=None, symbols=None, trade_and_nbbo_df=None
-    ):
-        if trade_and_nbbo_df is None:
-            df = self.merge_trades_nbbo(date=date, symbols=symbols)
-        else:
-            df = trade_and_nbbo_df.copy()
-
-        sel = (df.cross == 1) | (df.lock == 1)
-        df = df[~sel]
-
-        df["DollarEffectiveSpread"] = np.abs(df["price"] - df["midpoint"]) * 2
-        df["PercentEffectiveSpread"] = (
-            np.abs(np.log(df["price"]) - np.log(df["midpoint"])) * 2
-        )
-        return df
