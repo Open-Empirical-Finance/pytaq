@@ -4,37 +4,12 @@ from datetime import timedelta
 import pandas as pd
 import numpy as np
 
+from ..utils.float_approx import correct_float_approx
+from locks_crosses import filter_locks_crosses
 
-def correct_float_approx(
-    series: pd.Series, s1: pd.Series, s2: pd.Series, atol: float = 0.000001
-) -> pd.Series:
-    """Changes values of a Series to NA when the corresponding entries in the two other
-    series are numerically very close.
 
-    Notes:
-        In rare cases, trade prices and midpoints can be the same, but comparison and
-        arithmetic operations won't work as expected because of floating point
-        approximation error.
-
-        Numpy `numpy.isclose()` can be used to deal with these situations.
-
-    Args:
-        series (pd.Series): Series to correct
-        s1 (pd.Series): First series to compare
-        s2 (pd.Series): Second series to compare
-        atol (float, optional): Absolute tolerance for comparison. Defaults to 0.000001.
-
-    Returns:
-        pd.Series: Corrected Series
-    """
-    if s1.index != s2.index:
-        raise ValueError("s1 and s2 need to have the same index")
-    if s1.index != series.index:
-        raise ValueError("series, s1, and s2 need to have the same index")
-
-    sel = np.isclose(s1, s2, atol=atol, rtol=0.0, equal_nan=True)
-    series[sel] = pd.NA
-    return series
+BASE_SIGNS = ["LR", "EMO", "CLNV"]
+RETAIL_SIGNS = ["BJZ"] + [x + "notBJZ" for x in BASE_SIGNS]
 
 
 def dollar_realized_spread(
@@ -146,13 +121,6 @@ def merge_future_nbbo(
     )
 
 
-def remove_locks_crosses(df: pd.DataFrame, ask_col: str, bid_col: str) -> pd.DataFrame:
-    locks = np.isclose(df[ask_col], df[bid_col])
-    df = df[~locks]
-    crosses = df[bid_col] > df[ask_col]
-    return df[~crosses]
-
-
 def compute_rs_and_pi(
     trade_and_nbbo_df: pd.DataFrame,
     off_nbbo_df: pd.DataFrame,
@@ -161,10 +129,7 @@ def compute_rs_and_pi(
     track_retail: bool = False,
 ) -> pd.DataFrame:
     df = merge_future_nbbo(df=trade_and_nbbo_df, nbbo_df=off_nbbo_df, delay=delay)
-    df = remove_locks_crosses(df, ask_col="best_ask_next", bid_col="best_bid_next")
-
-    signs = ["LR", "EMO", "CLNV"]
-    if track_retail:
-        signs += ["BJZ"] + [x + "notBJZ" for x in signs]
+    df = filter_locks_crosses(df, asks=df["best_ask_next"], bids=df["best_bid_next"])
+    signs = BASE_SIGNS + RETAIL_SIGNS if track_retail else BASE_SIGNS
 
     return rs_and_pi(df, signs=signs, suffix=suffix)
