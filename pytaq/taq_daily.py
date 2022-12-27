@@ -11,6 +11,7 @@ import numpy as np
 from datetime import datetime, time, timedelta
 
 from utils.time_to_sql import time_to_sql
+from metrics.signs import sign_trades
 
 
 class TaqDaily:
@@ -830,67 +831,7 @@ class TaqDaily:
         #            by='symbol', allow_exact_matches=False,
         #            suffixes=('','_quote'))
 
-        df["midpoint"] = (df["best_bid"] + df["best_ask"]) / 2
-        df["lock"] = 0
-        sel = df["best_bid"] == df["best_ask"]
-        df.loc[sel, "lock"] = 1
-        df["cross"] = 0
-        sel = df["best_bid"] > df["best_ask"]
-        df.loc[sel, "cross"] = 1
-
-        # Trade direction (tick test)
-        df = df.sort_values(["timestamp", "symbol"])
-        # Note: could use dask array da.sign
-        df["dir"] = np.sign(df.groupby(["symbol"])["price"].diff())
-        df.loc[df["dir"] == 0, "dir"] = np.nan
-        df["dir"] = df.groupby(["symbol"])["dir"].fillna(method="ffill")
-
-        # First classification test: use tick test
-        df["BuySellLR"] = df["dir"]
-        df["BuySellEMO"] = df["dir"]
-        df["BuySellCLNV"] = df["dir"]
-
-        # Second classification test: use specified conditions of LR, EMO and
-        # CLNV.
-        sel_not_lc = (df["lock"] == 0) & (df["cross"] == 0)
-
-        df.loc[sel_not_lc & (df["price"] > df["midpoint"]), "BuySellLR"] = 1
-        df.loc[sel_not_lc & (df["price"] < df["midpoint"]), "BuySellLR"] = -1
-
-        df.loc[sel_not_lc & (df["price"] == df["best_ask"]), "BuySellEMO"] = 1
-        df.loc[sel_not_lc & (df["price"] == df["best_bid"]), "BuySellEMO"] = -1
-
-        df["ofr30"] = df["best_ask"] - 0.3 * (df["best_ask"] - df["best_bid"])
-        df["bid30"] = df["best_bid"] + 0.3 * (df["best_ask"] - df["best_bid"])
-        sel = (df["price"] >= df["ofr30"]) & (df["price"] <= df["best_ask"])
-        df.loc[sel_not_lc & sel, "BuySellCLNV"] = 1
-        sel = (df["price"] <= df["bid30"]) & (df["price"] >= df["best_bid"])
-        df.loc[sel_not_lc & sel, "BuySellCLNV"] = -1
-
-        for x in ["dir", "ofr30", "bid30"]:
-            del df[x]
-
-        if track_retail:
-            # Compute retail sign following "TRACKING RETAIL INVESTOR ACTIVITY"
-            # by EKKEHART BOEHMER, CHARLES M. JONES, and XIAOYAN ZHANG
-            def compute_retail_sign(s):
-                out = np.full(s.shape, np.nan)
-                for i in range(s.shape[0]):
-                    z = 100 * np.mod(s[i], 0.01)
-                    if (z >= 1e-4) & (z < 0.4):
-                        out[i] = -1.0
-                    if (z >= 0.6) & (z < (1 - 1e-4)):
-                        out[i] = 1.0
-                return out
-
-            sel = df["ex"] == "D"
-            df["BuySellBJZ"] = np.nan
-            df.loc[sel, "BuySellBJZ"] = compute_retail_sign(df.loc[sel, "price"].values)
-
-            sel = df["BuySellBJZ"].isnull()
-            for x in ["LR", "EMO", "CLNV"]:
-                df["BuySell" + x + "notBJZ"] = np.nan
-                df.loc[sel, "BuySell" + x + "notBJZ"] = df.loc[sel, "BuySell" + x]
+        df = sign_trades(df)
 
         df["dollar"] = df["price"] * df["size"]
 

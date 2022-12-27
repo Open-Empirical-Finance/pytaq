@@ -13,7 +13,7 @@ import numpy as np
 DEFAULT_ATOL = 0.000001
 
 
-def float_equal(s1: pd.Series, s2: pd.Series, atol: float = 0.000001) -> pd.Series:
+def float_equal(s1: pd.Series, s2: pd.Series, atol: float = DEFAULT_ATOL) -> pd.Series:
     """Compares two series for approximate equality.
 
     Args:
@@ -30,6 +30,19 @@ def float_equal(s1: pd.Series, s2: pd.Series, atol: float = 0.000001) -> pd.Seri
     series = pd.Series(np.isclose(s1, s2, atol=atol, rtol=0.0, equal_nan=True))
     series.index = s1.index
     return series
+
+
+def float_zero(s: pd.Series, atol: float = DEFAULT_ATOL) -> pd.Series:
+    """Compares a series for approximate equality with zero.
+
+    Args:
+        s (pd.Series): Series to compare with zero.
+        atol (float, optional): Absolute tolerance for comparison. Defaults to 0.000001.
+
+    Returns:
+        pd.Series: Series of boolean indicating approximate equality with zero
+    """
+    return float_equal(s, pd.Series(0.0, index=s.index), atol=atol)
 
 
 def correct_float_approx(
