@@ -8,10 +8,9 @@ Created on Mon Jul  6 17:32:02 2020
 
 import pandas as pd
 import numpy as np
-from datetime import datetime, time, timedelta
+from datetime import datetime, time
 
 from utils.time_to_sql import time_to_sql
-from metrics.signs import sign_trades
 
 
 class TaqDaily:
@@ -513,144 +512,6 @@ class TaqDaily:
         if output_flags:
             quote_out_cols += ["qu_cond", "natbbo_ind", "qu_source", "qu_cancel"]
         return df[quote_out_cols]
-
-    #%% Trades PostgreSQL
-
-    def get_trade_table_postgresql(self, date, symbols=None, get_cond=False):
-        trade_table = "ctm_" + date.strftime("%Y%m%d")
-
-        trade_cols = [
-            "date",
-            "time_m",
-            "ex",
-            "sym_root",
-            "sym_suffix",
-            "size",
-            "price",
-            "tr_seqnum",
-        ]
-        if get_cond:
-            trade_cols += ["tr_scond"]
-
-        select_cond = (
-            "SELECT "
-            + ", ".join(trade_cols)
-            + " FROM "
-            + self.taq_library
-            + "."
-            + trade_table
-        )
-
-        # This is for common stocks only, can tweak to have other symbols
-        if symbols is not None:
-            symbol_cond = (
-                " WHERE sym_root IN ('"
-                + "','".join(symbols)
-                + "') AND sym_suffix IS NULL"
-            )
-        else:
-            symbol_cond = " WHERE sym_suffix IS NULL"
-
-        # Retreive quotes during normal trading hours, starting before market
-        # open to ensure we have NBBO quotes at the beginning of the day.
-        time_cond = (
-            " AND (time_m BETWEEN "
-            + time_to_sql(self.start_time_trades, "'")
-            + " AND "
-            + time_to_sql(self.end_time_trades, "'")
-            + ")"
-        )
-
-        # Retreive only correct trades
-        trade_cond = " AND tr_corr = '00' AND price > 0"
-
-        sql_query = select_cond + symbol_cond + trade_cond + time_cond
-        return self.db.raw_sql(sql_query)
-
-    #%% Trades SASPy
-
-    def get_trade_table_saspy(self, date, symbols=None, get_cond=False):
-        trade_table = "ctm_" + date.strftime("%Y%m%d")
-
-        trade_cols = [
-            "date",
-            "time_m",
-            "ex",
-            "sym_root",
-            "sym_suffix",
-            "size",
-            "price",
-            "tr_seqnum",
-            "tr_corr",
-        ]
-        if get_cond:
-            trade_cols += ["tr_scond"]
-
-        sas_proc = (
-            "data DailyTrade;\n set taqmsec."
-            + trade_table
-            + " (keep = "
-            + " ".join(trade_cols)
-            + ")"
-            ';\n where sym_root in ("'
-            + '","'.join(symbols)
-            + '") and sym_suffix = ""  AND tr_corr = "00" AND price > 0 and (('
-            + time_to_sql(self.start_time_trades)
-            + "t) <= time_m <= ("
-            + time_to_sql(self.end_time_trades)
-            + "t));\n run;"
-        )
-
-        self.db.submit(sas_proc)
-        sas_trade = self.db.sasdata(libref="work", table="DailyTrade")
-        df = sas_trade.to_df()
-        df.columns = [c.lower() for c in df.columns]
-        del df["tr_corr"]
-
-        df["time_m"] = df.time_m.dt.time
-        return df
-
-    #%% Trades
-
-    def get_trade_table(self, date, symbols=None, get_cond=False):
-        if self.method == "PostgreSQL":
-            df = self.get_trade_table_postgresql(date, symbols, get_cond)
-        elif self.method == "SASPy":
-            df = self.get_trade_table_saspy(date, symbols, get_cond)
-        elif self.method is None:
-            raise ValueError("Method needed for get_trade_table()")
-        else:
-            raise ValueError(f"Unknown method for TaqDaily: {str(self.method)}")
-
-        # Merge date and time
-        df["timestamp"] = df[["date", "time_m"]].apply(
-            lambda x: datetime.combine(x["date"], x["time_m"]), axis=1
-        )
-
-        return self.clean_trade_table(df, get_cond=get_cond)
-
-    def clean_trade_table(self, df, get_cond=False):
-        # Merge symbol
-        df["symbol"] = df["sym_root"]
-        sel = df.sym_suffix.notnull()
-        df.loc[sel, "symbol"] = (
-            df.loc[sel, "sym_root"] + " " + df.loc[sel, "sym_suffix"]
-        )
-        trade_out_cols = [
-            "timestamp",
-            "symbol",
-            "ex",
-            "size",
-            "price",
-            "dollar",
-            "tr_seqnum",
-        ]
-        if get_cond:
-            trade_out_cols += ["tr_scond"]
-
-        df["dollar"] = df["price"] * df["size"]
-
-        return df[trade_out_cols]
 
     #%% Official Complete NBBO PostgreSQL
 
