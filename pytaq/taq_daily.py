@@ -636,9 +636,19 @@ class TaqDaily:
         df.loc[sel, "symbol"] = (
             df.loc[sel, "sym_root"] + " " + df.loc[sel, "sym_suffix"]
         )
-        trade_out_cols = ["timestamp", "symbol", "ex", "size", "price", "tr_seqnum"]
+        trade_out_cols = [
+            "timestamp",
+            "symbol",
+            "ex",
+            "size",
+            "price",
+            "dollar",
+            "tr_seqnum",
+        ]
         if get_cond:
             trade_out_cols += ["tr_scond"]
+
+        df["dollar"] = df["price"] * df["size"]
 
         return df[trade_out_cols]
 
@@ -793,46 +803,3 @@ class TaqDaily:
         df = df.sort_values(["symbol", "timestamp"])
 
         return df[nbbo_out_cols]
-
-    #%%% Merge trades and NBBO
-    # We merge the quote in effect at trade time
-
-    def merge_trades_nbbo(
-        self,
-        date=None,
-        symbols=None,
-        trade_df=None,
-        off_nbbo_df=None,
-        track_retail=None,
-    ):
-        if track_retail is None:
-            track_retail = self.track_retail
-
-        if trade_df is None:
-            trade_df = self.get_trade_table(date=date, symbols=symbols)
-        if off_nbbo_df is None:
-            off_nbbo_df = self.get_official_complete_nbbo(date=date, symbols=symbols)
-
-        trade_df = trade_df.sort_values(["timestamp", "symbol"])
-        off_nbbo_df = off_nbbo_df.sort_values(["timestamp", "symbol"])
-
-        # Note: could use dask dataframe dd.merge_asof
-        df = pd.merge_asof(
-            trade_df,
-            off_nbbo_df,
-            on="timestamp",
-            by="symbol",
-            allow_exact_matches=False,
-            suffixes=("", "_quote"),
-        )
-
-        # Note: H&J code is wrong I think,
-        # df = pd.merge_asof(trade_df, off_nbbo_df, on='timestamp',
-        #            by='symbol', allow_exact_matches=False,
-        #            suffixes=('','_quote'))
-
-        df = sign_trades(df)
-
-        df["dollar"] = df["price"] * df["size"]
-
-        return df
