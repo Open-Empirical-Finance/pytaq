@@ -6,10 +6,7 @@ import numpy as np
 
 from ..utils.float_approx import correct_float_approx
 from locks_crosses import filter_locks_crosses
-
-
-BASE_SIGNS = ["LR", "EMO", "CLNV"]
-RETAIL_SIGNS = ["BJZ"] + [x + "notBJZ" for x in BASE_SIGNS]
+from signs import BASE_SIGNS, RETAIL_SIGNS
 
 
 def dollar_realized_spread(

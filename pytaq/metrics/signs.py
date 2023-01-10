@@ -8,6 +8,9 @@ from ..metrics.locks_crosses import locked_crossed_rows
 
 DEFAULT_CLNV_THRESHOLD = 0.3
 
+BASE_SIGNS = ["LR", "EMO", "CLNV"]
+RETAIL_SIGNS = ["BJZ"] + [x + "notBJZ" for x in BASE_SIGNS]
+
 
 def sign_tick(
     df: pd.DataFrame,
@@ -105,6 +108,7 @@ def sign_trades(
     groupby_col: Union[str, List[str]] = "symbol",
     timestamp_col: str = "timestamp",
     price_col: str = "price",
+    sign_col_prefix: str = "BuySell",
     clnv_threshold: float = DEFAULT_CLNV_THRESHOLD,
 ) -> pd.DataFrame:
 
@@ -115,20 +119,20 @@ def sign_trades(
         df=df, groupby_col=groupby_col, timestamp_col=timestamp_col, price_col=price_col
     )
 
-    df["BuySellLR"] = sign_lr(
+    df[f"{sign_col_prefix}LR"] = sign_lr(
         price=df[price_col],
         midpoint=df["midpoint"],
         tick_dir=tick_dir,
         lock_cross=lock_cross,
     )
-    df["BuySellEMO"] = sign_emo(
+    df[f"{sign_col_prefix}EMO"] = sign_emo(
         price=df[price_col],
         best_bid=df["best_bid"],
         best_ask=df["best_ask"],
         tick_dir=tick_dir,
         lock_cross=lock_cross,
     )
-    df["BuySellCLNV"] = sign_emo(
+    df[f"{sign_col_prefix}CLNV"] = sign_emo(
         price=df[price_col],
         best_bid=df["best_bid"],
         best_ask=df["best_ask"],
@@ -136,11 +140,13 @@ def sign_trades(
         lock_cross=lock_cross,
         threshold=clnv_threshold,
     )
-    df["BuySellBJZ"] = sign_bjz(price=df[price_col], ex=df["ex"])
+    df[f"{sign_col_prefix}BJZ"] = sign_bjz(price=df[price_col], ex=df["ex"])
 
-    sel = df["BuySellBJZ"].isnull()
+    sel = df[f"{sign_col_prefix}BJZ"].isnull()
     for x in ["LR", "EMO", "CLNV"]:
-        df["BuySell" + x + "notBJZ"] = np.nan
-        df.loc[sel, "BuySell" + x + "notBJZ"] = df.loc[sel, "BuySell" + x]
+        df[f"{sign_col_prefix}{x}notBJZ"] = np.nan
+        df.loc[sel, f"{sign_col_prefix}{x}notBJZ"] = df.loc[
+            sel, f"{sign_col_prefix}{x}"
+        ]
 
     return df
