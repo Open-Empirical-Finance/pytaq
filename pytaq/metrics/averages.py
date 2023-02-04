@@ -7,7 +7,7 @@ def compute_averages(
     df: pd.DataFrame,
     cols: Iterable[str],
     group: str = "symbol",
-    weights: Iterable[Tuple(Union[str, None], str)] = [
+    weights: Iterable[Tuple[Union[str, None], str]] = [
         (None, ""),
     ],
 ) -> pd.DataFrame:
@@ -27,7 +27,7 @@ def compute_averages(
     Returns:
         pd.DataFrame: DataFrame of the averages
     """
-    weight_cols = [x[0] for x in weights if x is not None]
+    weight_cols = [x[0] for x in weights if x[0] is not None]
 
     def compute_wavg(x):
         out = {}
@@ -78,4 +78,4 @@ def compute_averages_ave_sw_dw(
     if share_weighted:
         weights.append(("size", "_SW"))
 
-    return compute_averages(df=df, measures=measures, group="symbol", weights=weights)
+    return compute_averages(df=df, cols=measures, group="symbol", weights=weights)

@@ -1,6 +1,6 @@
 from datetime import datetime, time
 
-from time_to_sql import time_to_sql
+from .time_to_sql import time_to_sql
 
 
 def test_time_to_sql() -> None:
