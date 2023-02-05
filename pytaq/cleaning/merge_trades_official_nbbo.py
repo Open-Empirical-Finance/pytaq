@@ -1,7 +1,7 @@
 import pandas as pd
 
 
-def merge_trades_nbbo(
+def merge_trades_official_nbbo(
     trades: pd.DataFrame,
     off_nbbo: pd.DataFrame,
 ) -> pd.DataFrame:
