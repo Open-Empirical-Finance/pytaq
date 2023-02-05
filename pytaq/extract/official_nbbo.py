@@ -4,9 +4,7 @@ from datetime import datetime, date, time
 import pandas as pd
 
 from .postgresql import build_sql_query
-
-DEFAULT_START_TIME_OFF_NBBO = time(hour=9, minute=0)
-DEFAULT_END_TIME_OFF_NBBO = time(hour=16, minute=0)
+from .hj_defaults import HJ_START_TIME_QUOTES, HJ_END_TIME_QUOTES
 
 OFF_NBBO_COLS_DB = [
     "date",
@@ -45,8 +43,8 @@ def get_official_complete_nbbo_sql_query(
     date: Union[datetime, date],
     library: str = None,
     symbols: Optional[List[str]] = None,
-    start_time: Optional[Union[datetime, time]] = DEFAULT_START_TIME_OFF_NBBO,
-    end_time: Optional[Union[datetime, time]] = DEFAULT_END_TIME_OFF_NBBO,
+    start_time: Optional[Union[datetime, time]] = HJ_START_TIME_QUOTES,
+    end_time: Optional[Union[datetime, time]] = HJ_END_TIME_QUOTES,
 ) -> str:
     """Retursn a SQL query to retreive the official complete NBBO from TAQ in WRDS
 
@@ -91,8 +89,8 @@ def get_official_complete_nbbo(
     conn: "wrds.sql.Connection",
     library: str = None,
     symbols: Optional[List[str]] = None,
-    start_time: Optional[Union[datetime, time]] = DEFAULT_START_TIME_OFF_NBBO,
-    end_time: Optional[Union[datetime, time]] = DEFAULT_END_TIME_OFF_NBBO,
+    start_time: Optional[Union[datetime, time]] = HJ_START_TIME_QUOTES,
+    end_time: Optional[Union[datetime, time]] = HJ_END_TIME_QUOTES,
 ) -> pd.DataFrame:
     """Retreives and cleans trades from TAQ in WRDS
 

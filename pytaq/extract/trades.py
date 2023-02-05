@@ -4,9 +4,7 @@ from datetime import datetime, date, time
 import pandas as pd
 
 from .postgresql import build_sql_query
-
-DEFAULT_START_TIME_TRADES = time(hour=9, minute=30)
-DEFAULT_END_TIME_TRADES = time(hour=16, minute=0)
+from .hj_defaults import HJ_START_TIME_TRADES, HJ_END_TIME_TRADES
 
 TRADES_COLS_DB = [
     "date",
@@ -48,8 +46,8 @@ def get_trades_sql_query(
     date: Union[datetime, date],
     library: str = None,
     symbols: Optional[List[str]] = None,
-    start_time: Optional[Union[datetime, time]] = DEFAULT_START_TIME_TRADES,
-    end_time: Optional[Union[datetime, time]] = DEFAULT_END_TIME_TRADES,
+    start_time: Optional[Union[datetime, time]] = HJ_START_TIME_TRADES,
+    end_time: Optional[Union[datetime, time]] = HJ_END_TIME_TRADES,
 ) -> str:
     """Retursn a SQL query to retreive trades from TAQ in WRDS
 
@@ -109,8 +107,8 @@ def get_trades(
     conn: "wrds.sql.Connection",
     library: str = None,
     symbols: Optional[List[str]] = None,
-    start_time: Optional[Union[datetime, time]] = DEFAULT_START_TIME_TRADES,
-    end_time: Optional[Union[datetime, time]] = DEFAULT_END_TIME_TRADES,
+    start_time: Optional[Union[datetime, time]] = HJ_START_TIME_TRADES,
+    end_time: Optional[Union[datetime, time]] = HJ_END_TIME_TRADES,
 ) -> pd.DataFrame:
     """Retreives and cleans trades from TAQ in WRDS
 
