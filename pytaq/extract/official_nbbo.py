@@ -5,6 +5,7 @@ import pandas as pd
 
 from .postgresql import build_sql_query
 from .hj_defaults import HJ_START_TIME_QUOTES, HJ_END_TIME_QUOTES
+from .common import merge_symbol
 
 OFF_NBBO_COLS_DB = [
     "date",
@@ -71,13 +72,7 @@ def get_official_complete_nbbo_sql_query(
 
 def clean_official_complete_nbbo(nbbo: pd.DataFrame) -> pd.DataFrame:
     # Post-SQL query cleanup
-
-    # Merge symbol
-    nbbo["symbol"] = nbbo["sym_root"]
-    sel = nbbo.sym_suffix.notnull()
-    nbbo.loc[sel, "symbol"] = (
-        nbbo.loc[sel, "sym_root"] + " " + nbbo.loc[sel, "sym_suffix"]
-    )
+    nbbo = merge_symbol(nbbo)
 
     nbbo = nbbo.sort_values(["symbol", "timestamp"])
 

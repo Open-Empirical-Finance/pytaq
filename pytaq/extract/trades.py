@@ -5,6 +5,7 @@ import pandas as pd
 
 from .postgresql import build_sql_query
 from .hj_defaults import HJ_START_TIME_TRADES, HJ_END_TIME_TRADES
+from .common import merge_datetime, merge_symbol
 
 TRADES_COLS_DB = [
     "date",
@@ -86,16 +87,8 @@ def clean_trade_table(trades: pd.DataFrame) -> pd.DataFrame:
     Returns:
         pd.DataFrame: Cleaned trades table
     """
-    # Merge date and time
-    trades["timestamp"] = trades[["date", "time_m"]].apply(
-        lambda x: datetime.combine(x["date"], x["time_m"]), axis=1
-    )
-    # Merge symbol
-    trades["symbol"] = trades["sym_root"]
-    sel = trades.sym_suffix.notnull()
-    trades.loc[sel, "symbol"] = (
-        trades.loc[sel, "sym_root"] + " " + trades.loc[sel, "sym_suffix"]
-    )
+    trades = merge_symbol(merge_datetime(trades))
+
     # Compute dollar value
     trades["dollar"] = trades["price"] * trades["size"]
 

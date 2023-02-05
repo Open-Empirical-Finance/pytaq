@@ -4,7 +4,7 @@ from datetime import time
 
 
 HJ_KEEP_QU_COND = {"A", "B", "H", "O", "R", "W"}
-HJ_MAX_SPREAD = 5
+HJ_MAX_SPREAD = 5.0
 HJ_MAX_QUOTE_CHANGE = 2.5
 
 
