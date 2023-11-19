@@ -1,11 +1,11 @@
-from datetime import datetime, time, date
-from typing import Union, List
+from datetime import date, datetime, time
+from typing import List, Optional, Union
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 from ..cleaning.timestamps import filter_timestamp
-from locks_crosses import filter_locks_crosses
+from .locks_crosses import filter_locks_crosses
 
 
 def compute_quote_inforce(
@@ -14,8 +14,7 @@ def compute_quote_inforce(
     groupby_col: Union[str, List[str]] = "symbol",
     timestamp_col: str = "timestamp",
     inforce_col: str = "inforce",
-) -> pd.Series:
-
+) -> pd.DataFrame:
     # Compute time between each quote
     df[inforce_col] = df.groupby(groupby_col)[timestamp_col].diff().dt.total_seconds()
     df[inforce_col] = df.groupby(groupby_col)[inforce_col].shift(-1)
@@ -24,6 +23,7 @@ def compute_quote_inforce(
     df.loc[sel, inforce_col] = np.abs(
         (end_timestamp - df.loc[sel, timestamp_col]).dt.total_seconds()
     )
+    return df
 
 
 def compute_spreads(df: pd.DataFrame) -> pd.DataFrame:
@@ -59,8 +59,8 @@ def compute_weighted_averages(
 def compute_weighted_spreads(
     date: date,
     off_nbbo_df: pd.DataFrame,
-    start_time: time = None,
-    end_time: time = None,
+    start_time: time,
+    end_time: time,
 ) -> Union[pd.DataFrame, None]:
     df = filter_timestamp(
         off_nbbo_df, timestamp=off_nbbo_df.timestamp, start_time=start_time

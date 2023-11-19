@@ -1,7 +1,7 @@
 from typing import List, Optional, Union
 from datetime import datetime, time
 
-from utils.time_to_sql import time_to_sql
+from ..utils.time_to_sql import time_to_sql
 
 DEFAULT_LIBRARY = "taqmsec"
 

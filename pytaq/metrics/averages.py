@@ -1,6 +1,7 @@
-from typing import Iterable, Tuple, Union
-import pandas as pd
+from typing import Iterable, List, Tuple, Union
+
 import numpy as np
+import pandas as pd
 
 
 def compute_averages(
@@ -70,7 +71,7 @@ def compute_averages_ave_sw_dw(
         pd.DataFrame: DataFrame of the averages
     """
 
-    weights = []
+    weights: List[Tuple[Union[str, None], str]] = []
     if simple:
         weights.append((None, "_Ave"))
     if dollar_weighted:
