@@ -16,6 +16,7 @@ pytest = "^7.4.3"
 pyarrow = "^14.0.1"
 scipy = "^1.11.3"
 pandas-stubs = "^2.1.1.230928"
+mkdocs-material = "^9.4.10"
 
 [build-system]
 requires = ["poetry-core"]
